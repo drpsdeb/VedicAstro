@@ -1615,7 +1615,7 @@ RULES FOR THIS READING:
       ) : null}
 
       <div className="absolute top-0 left-0 w-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-center py-1.5 px-4 text-[10px] font-bold z-50 shadow-md flex justify-center gap-1.5">
-        <LogoSVG className="w-4 h-4" /> VedicAstro 1.3.0 (AI Live)
+        <LogoSVG className="w-4 h-4" /> VedicAstro 1.4.0 (AI Live)
       </div>
 
       {/* WIDESCREEN MAIN CONTAINER */}
