@@ -5,15 +5,24 @@ import { Star, Info, Settings, Loader2, Search, Cloud, Plus, Cpu, AlertTriangle,
 // FIREBASE CLOUD SETUP
 // ==========================================
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
 
-// Local-only mode (No Cloud Saving for now)
-const firebaseConfig = null;
-const app = null;
-const auth = null;
-const db = null;
-const appId = "vedic-astro-local";
+// PASTE YOUR REAL KEYS HERE:
+const firebaseConfig = {
+  apiKey: "AIzaSyCioK1ECb7E3hSuytE22Ykg4sDpWcnNmUw",
+  authDomain: "vedicastro-2026.firebaseapp.com",
+  projectId: "vedicastro-2026",
+  storageBucket: "vedicastro-2026.firebasestorage.app",
+  messagingSenderId: "261708630120",
+  appId: "1:261708630120:web:c70b4159741593031853dd",
+  measurementId: "G-GEVLSRCOK6"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "vedic-astro-live";
 
 // ==========================================
 // BUILT-IN ASSETS & HELPERS
@@ -36,9 +45,30 @@ const safeStr = (str, delimiter) => {
 const HARDCODED_PROFILES = [];
 let memoryStorage = {}; 
 const safeStorage = {
-  get: (k) => { try { const i = window.localStorage.getItem(k); return i ? JSON.parse(i) : memoryStorage[k] || null; } catch (e) { return memoryStorage[k] || null; } },
-  set: (k, v) => { memoryStorage[k] = v; try { window.localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
-  remove: (k) => { delete memoryStorage[k]; try { window.localStorage.removeItem(k); } catch (e) {} }
+  get: (k) => { 
+    try { 
+      const i = window.localStorage.getItem(k); 
+      return i ? JSON.parse(i) : memoryStorage[k] || null; 
+    } catch (e) { 
+      console.error("Storage GET Error:", e);
+      return memoryStorage[k] || null; 
+    } 
+  },
+  set: (k, v) => { 
+    memoryStorage[k] = v; 
+    try { 
+      window.localStorage.setItem(k, JSON.stringify(v)); 
+      console.log(`✅ SUCCESS: Browser hard drive accepted ${v.length} profiles.`);
+    } catch (e) {
+      console.error("🚨 SILENT KILLER CAUGHT! Browser refused to save:", e);
+    } 
+  },
+  remove: (k) => { 
+    delete memoryStorage[k]; 
+    try { 
+      window.localStorage.removeItem(k); 
+    } catch (e) {} 
+  }
 };
 
 // Exponential Backoff Fetch
@@ -497,9 +527,9 @@ const AstroEngine = {
 // ==========================================
 // UI COMPONENTS
 // ==========================================
-const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile }) => {
-  const emptyClient = { name: '', dob: '', time: '', city: '', state: '', lat: 17.3850, lon: 78.4867, tzone: 5.5, sameAsBirth: true, currentCity: '', currentLat: 17.3850, currentLon: 78.4867, currentTzone: 5.5, astroLevel: 'beginner', language: 'English', chartStyle: 'North Indian', maritalStatus: 'Unknown', careerStatus: 'Unknown', parentsStatus: 'Unknown', children: 'Unknown', lifeContext: '' };
-
+const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile, onGoogleLogin , isLoggedIn }) => {
+  const emptyClient = { name: '', dob: '',dod: '', time: '', city: '', state: '', lat: 17.3850, lon: 78.4867, tzone: 5.5, sameAsBirth: true, currentCity: '', currentLat: 17.3850, currentLon: 78.4867, currentTzone: 5.5, astroLevel: 'beginner', language: 'English', chartStyle: 'North Indian', maritalStatus: 'Unknown', careerStatus: 'Unknown', parentsStatus: 'Unknown', children: 'Unknown', lifeContext: '' };
+   
   const [formData, setFormData] = useState(() => {
     const savedData = safeStorage.get('astroFormData');
     return (savedData && typeof savedData === 'object' && savedData.name) ? { ...emptyClient, ...savedData } : (savedProfiles[0] || emptyClient);
@@ -507,6 +537,7 @@ const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile }
   
   const [geminiKey, setGeminiKey] = useState(() => safeStorage.get('geminiApiKey') || '');
   const [showHelp, setShowHelp] = useState(false);
+  const [profileSearch, setProfileSearch] = useState('');
   const [showAdvancedCtx, setShowAdvancedCtx] = useState(false);
   const [isLocating, setIsLocating] = useState({ birth: false, current: false });
   const [suggestions, setSuggestions] = useState({ birth: [], current: [] });
@@ -551,10 +582,10 @@ const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile }
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData && formData.name && formData.dob) {
-      onSaveProfile(formData);
-      safeStorage.set('astroFormData', formData);
-      safeStorage.set('geminiApiKey', geminiKey);
-      onStartApp({ formData, geminiKey }); 
+        onSaveProfile(formData);
+        safeStorage.set('astroFormData', formData);
+        safeStorage.set('geminiApiKey', geminiKey);
+        onStartApp({ formData, geminiKey });
     }
   };
 
@@ -598,22 +629,56 @@ const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile }
           <div className="bg-slate-100 p-3 rounded border border-slate-300">
             <label className="text-xs text-slate-600 mb-2 font-bold flex items-center justify-between w-full">
               <span className="flex items-center gap-1"><Cloud size={14} className="text-blue-500"/> SAVED CLOUD PROFILES</span>
-              <button type="button" onClick={handleNewClient} className="text-blue-600 hover:text-blue-800 bg-blue-100 px-2 py-0.5 rounded shadow-sm transition-colors flex items-center gap-1"><Plus size={12}/> New</button>
+              <button type="button" onClick={handleNewClient} className="text-blue-600 hover:text-blue-800 bg-blue-100 px-2 py-0.5 rounded shadow-sm transition-colors">
+                + New
+              </button>
             </label>
+
+            {/* NEW SEARCH BOX */}
+            <input 
+              type="text" 
+              placeholder="🔍 Search names..." 
+              value={profileSearch}
+              onChange={(e) => setProfileSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+              className="w-full mb-2 p-1.5 text-xs bg-white border border-slate-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+            />
+
             <div className="flex gap-2 items-center">
-              <select className="flex-1 p-2 bg-white rounded border border-slate-300 focus:border-green-500 outline-none text-sm shadow-sm font-bold text-green-900" onChange={handleClientSelect} value={(() => { const idx = savedProfiles.findIndex(c => c && c.name === formData?.name && c.dob === formData?.dob); return idx >= 0 ? String(idx) : '-1'; })()}>
-                <option value="-1" disabled>-- Select a Profile --</option>
-                {savedProfiles.map((client, index) => (client && client.name) ? <option key={index} value={String(index)}>{String(client.name)}</option> : null)}
-              </select>
-              <button type="button" onClick={handleDeleteClient} className="p-2 bg-red-100 text-red-600 hover:bg-red-200 border border-red-200 rounded shadow-sm transition-colors flex items-center justify-center">🗑️</button>
+            <select className="flex-1 p-2 bg-white rounded border border-slate-300 focus:border-green-500 outline-none text-sm shadow-sm font-bold text-green-900" onChange={handleClientSelect} value="-1">
+              <option value="-1" disabled>-- Select a Profile --</option>
+              {savedProfiles.map((client, index) => {
+                if (!client || !client.name) return null;
+                // Filter out names that don't match the search query
+                if (profileSearch && !client.name.toLowerCase().includes(profileSearch.toLowerCase())) return null;
+                return <option key={index} value={String(index)}>{String(client.name)}</option>;
+              })}
+            </select>
+            <button type="button" onClick={handleDeleteClient} className="p-2 bg-red-100 text-red-600 hover:bg-red-200 border border-red-200 rounded shadow-sm transition-colors" title="Delete Profile">
+              🗑️
+            </button>
+            
+  <button
+  type="button"
+  onClick={onGoogleLogin}
+  disabled={isLoggedIn}
+  className={`px-3 py-1.5 rounded shadow-sm text-sm font-bold ml-2 transition-all ${
+    isLoggedIn
+      ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+      : "bg-blue-500 text-white hover:bg-blue-600"
+  }`}
+>
+  {isLoggedIn ? "✅ Signed In" : "Sign in with Google 🚀"}
+</button>
             </div>
           </div>
         ) : null}
 
         <div><label className="block text-xs text-slate-600 mb-1 font-bold">FULL NAME</label><input type="text" value={formData.name || ''} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-green-500 outline-none text-sm shadow-inner" required onChange={e => setFormData({...formData, name: e.target.value})} /></div>
-        <div className="grid grid-cols-2 gap-4">
-          <div><label className="block text-xs text-slate-600 mb-1 font-bold">DATE OF BIRTH</label><input type="date" value={formData.dob || ''} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-green-500 outline-none text-sm shadow-inner" required onChange={e => setFormData({...formData, dob: e.target.value})} /></div>
-          <div><label className="block text-xs text-slate-600 mb-1 font-bold">TIME OF BIRTH</label><input type="time" value={formData.time || ''} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-green-500 outline-none text-sm shadow-inner" required onChange={e => setFormData({...formData, time: e.target.value})} /></div>
+        <div className="grid grid-cols-3 gap-2">
+          <div><label className="block text-xs text-slate-600 mb-1 font-bold">DATE OF BIRTH</label><input type="date" value={formData.dob || ''} onChange={(e) => setFormData({...formData, dob: e.target.value})} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all" /></div>
+          <div><label className="block text-xs text-slate-600 mb-1 font-bold">TIME OF BIRTH</label><input type="time" value={formData.time || ''} onChange={(e) => setFormData({...formData, time: e.target.value})} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all" /></div>
+          <div><label className="block text-xs text-slate-400 mb-1 font-bold">DATE OF DEATH <span className="font-normal normal-case">(Opt)</span></label><input type="date" value={formData.dod || ''} onChange={(e) => setFormData({...formData, dod: e.target.value})} className="w-full p-2 bg-white rounded border border-slate-300 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 outline-none transition-all text-slate-600" /></div>
         </div>
 
         <div className="bg-stone-50 p-3 rounded-lg border border-stone-200">
@@ -712,7 +777,9 @@ const BirthForm = ({ onStartApp, savedProfiles, onSaveProfile, onDeleteProfile }
         </div>
 
         <button type="submit" className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 px-4 rounded shadow-md transition-colors mt-6 text-sm uppercase tracking-wider font-serif">
-          Generate Cosmic Watch & Save to Cloud
+          {savedProfiles?.some(profile => profile.name === formData?.name) 
+  ? "GO TO VEDICASTRO 🚀" 
+  : "SAVE TO CLOUD & GO TO VEDICASTRO 🚀"}
         </button>
       </form>
     </div>
@@ -733,7 +800,7 @@ const handleChartPlanetClick = (p, lagnaIndex, onSymbolClick, chartType, allPlan
     
     if (chartType === 'natal' || chartType === 'transit') {
         const safeDeg = (p.fullDegree % 360 + 360) % 360; 
-        const nakExact = safeDeg / (40 / 3);
+        const nakExact = safeDeg / (40 / 3);handleGoogleLogin
         const nakIndex = Math.floor(nakExact);
         const nakName = String(safeStr(AstroEngine.NAKSHATRAS[nakIndex], ','));
         const pada = Math.floor((nakExact - nakIndex) * 4) + 1;
@@ -870,8 +937,47 @@ export default function App() {
       const valid = local.filter(p => p && typeof p === 'object' && p.name && p.dob);
       if (valid.length > 0) return valid;
     }
-    return HARDCODED_PROFILES;
+    return [{ name: "Master Key", dob: "1954-10-29", tob: "10:50", lat: 22.5, lon: 88.3, tz: 5.5 }];
   });
+
+  // 🔐 GOOGLE SIGN-IN FUNCTION
+  const handleGoogleLogin = () => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+      .then((result) => console.log(`✅ Welcome, ${result.user.displayName}!`))
+      .catch((error) => console.error("❌ Google Login Failed", error));
+  };
+
+  // ☁️ CLOUD SYNC: Automatically pulls profiles from Firebase on startup
+  useEffect(() => {
+    if (db && auth) {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          console.log("☁️ Firebase: Syncing with Cloud...");
+          const profilesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'profiles');
+          
+          onSnapshot(profilesRef, (snapshot) => {
+            const cloudProfiles = snapshot.docs.map(doc => doc.data());
+            if (cloudProfiles.length > 0) {
+              console.log(`✅ Cloud synced ${cloudProfiles.length} profiles!`);
+              setSavedProfiles(cloudProfiles);
+              // Keeps browser hard drive updated too
+              window.localStorage.setItem('astroClients', JSON.stringify(cloudProfiles));
+            }
+          });
+        } else {
+          // Log in if not already connected
+          console.log("🔒 Waiting for Google Sign-In...");
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [db, auth]);
+
+  // Always keep LocalStorage perfectly in sync with React State
+  useEffect(() => {
+     safeStorage.set('astroClients', savedProfiles);
+  }, [savedProfiles]);
 
   const [userData, setUserData] = useState(() => {
     const sf = safeStorage.get('astroFormData');
@@ -879,7 +985,156 @@ export default function App() {
   });
 
   const [time, setTime] = useState(new Date());
+  const [isRealtime, setIsRealtime] = useState(true);
   const [viewMode, setViewMode] = useState('natal'); 
+  
+  const [prashnaDetails, setPrashnaDetails] = useState({
+  question: '',
+  date: '', 
+  time: '',
+  city: '',
+  lat: '',
+  lon: '',
+  tzone: ''
+});
+const [showPrashnaChart, setShowPrashnaChart] = useState(false);
+const [prashnaChartData, setPrashnaChartData] = useState(null);
+
+// PASTE THE FUNCTION RIGHT HERE:
+const searchPrashnaLocation = async () => {
+    if (!prashnaDetails.city) return;
+    
+    console.log("Searching for:", prashnaDetails.city);
+    
+    try {
+        // Step 1: Get Lat & Lon from OpenStreetMap (Grabbing the top 1 result)
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(prashnaDetails.city)}&format=json&limit=1`);
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+            const loc = data[0];
+            const lat = parseFloat(loc.lat);
+            const lon = parseFloat(loc.lon);
+            let tzone = "5.5"; // Default fallback to IST
+
+            // Step 2: Get Timezone from Open-Meteo using the new Lat/Lon
+            try {
+                const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`);
+                const tzData = await tzRes.json();
+                if (tzData && tzData.utc_offset_seconds !== undefined) {
+                    tzone = (tzData.utc_offset_seconds / 3600).toString();
+                }
+            } catch (e) {
+                console.error("Timezone fetch failed", e);
+            }
+
+            // Step 3: Automatically fill the Prashna form fields
+            setPrashnaDetails({
+                ...prashnaDetails,
+                city: loc.name || loc.display_name.split(',')[0], // Updates to the clean city name
+                lat: lat.toFixed(4),
+                lon: lon.toFixed(4),
+                tzone: tzone
+            });
+            
+        } else {
+            alert("Location not found. Please try adding the state or country (e.g., 'London, UK').");
+        }
+    } catch (error) {
+        console.error("Search failed", error);
+        alert("Network error while searching for location.");
+    }
+};
+const getOverallPrashnaReading = async () => {
+        if (!prashnaDetails?.question) return;
+
+        // 1. Open the popup in a loading state
+        setPopupInfo({ 
+            title: "Overall Prashna Analysis", 
+            subtitle: prashnaDetails.question, 
+            text: "Analyzing the complete Horary chart dynamics...", 
+            isLoadingAI: true, 
+            aiText: null,
+            aspectData: [],
+            conjunctionData: null,
+            exchangedData: null
+        });
+
+        // 2. Translate the chart math into text for Gemini
+        const lIndex = prashnaChartData.lagnaIndex;
+        const lagnaName = AstroEngine.SIDEREAL_RASIS[isNaN(lIndex) ? 0 : lIndex];
+
+        const planetPositions = prashnaChartData.planets.map(p => {
+             const rasiName = AstroEngine.SIDEREAL_RASIS[p.rasiIndex];
+             const houseNum = ((p.rasiIndex - lIndex + 12) % 12) + 1;
+             return `${p.planet} in ${rasiName} (House ${houseNum})`;
+        }).join(', ');
+
+        // 3. Write the Master Prashna Prompt
+        const prompt = `CRITICAL INSTRUCTION: You are acting as a Master Vedic Astrologer analyzing a complete PRASHNA (Horary) chart.
+THE CLIENT'S EXACT QUESTION IS: "${prashnaDetails.question}"
+
+Here are the mathematical details of the Prashna chart cast for this exact moment:
+- Ascendant (Lagna): ${lagnaName}
+- Planetary Positions: ${planetPositions}
+
+RULES FOR THIS READING:
+1. Do NOT give a general life prediction.
+2. Identify the 'Karya Bhava' (the house governing the query) based on the question.
+3. Analyze the condition of the Lagna Lord (representing the querent) and the Karyaesh (Lord of the question).
+4. Analyze the Moon's position and application.
+5. Provide a direct, definitive answer to the question based on these classical Prashna Shastra principles.`;
+
+        // 4. Send to Gemini
+        const aiResponse = await AstroEngine.callGemini(
+            prompt, 
+            userData?.geminiKey, 
+            userData?.formData?.astroLevel || 'expert', 
+            userData?.formData?.language || 'English'
+        );
+        
+        // 5. Update the popup with the final AI text
+        setPopupInfo(prev => prev ? { 
+            ...prev, 
+            aiText: aiResponse?.text || aiResponse?.error || "Error generating reading.", 
+            isLoadingAI: false 
+        } : null);
+    };
+const generatePrashnaChart = () => {
+    if (!prashnaDetails.date || !prashnaDetails.time) {
+        alert("Please ensure Date and Time are filled out.");
+        return;
+    }
+
+    console.log("Generating Prashna Chart...");
+
+    // 1. Format the date and time
+    const [y, m, d] = prashnaDetails.date.split('-').map(Number);
+    const [hr, min] = prashnaDetails.time.split(':').map(Number);
+    
+    // 2. Auto-sync from the Client's CURRENT LOCATION (Gochara/Transits)
+    // It prioritizes current location, but falls back to birth location if missing
+    const form = userData?.formData || {};
+    const tz = Number(form.currentTzone || form.tzone || 5.5);
+    const finalLat = parseFloat(form.currentLat || form.lat || 17.3850); 
+    const finalLon = parseFloat(form.currentLon || form.lon || 78.4867);
+    const finalCity = form.currentCity || form.city || "Hyderabad";
+
+    const pDate = new Date(Date.UTC(y, m - 1, d, hr, min) - (tz * 3600000));
+
+    // 3. Run the Ephemeris calculations
+    const prashnaPositions = OfflineEphemeris.getPositions(pDate, finalLat, finalLon);
+
+    // 4. Save to Prashna state
+    setPrashnaChartData({
+        planets: prashnaPositions.planets,
+        lagnaIndex: prashnaPositions.lagnaIndex,
+        city: finalCity 
+    });
+
+    // 5. Show the chart!
+    setShowPrashnaChart(true);
+};
   const [subChart, setSubChart] = useState('d9'); 
   const [panchangView, setPanchangView] = useState('transit');
   const [functionalTab, setFunctionalTab] = useState('roles');
@@ -903,7 +1158,7 @@ export default function App() {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
            await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-           await signInAnonymously(auth);
+         //  await signInAnonymously(auth);
         }
       } catch (e) {
           console.error("Auth Init Error:", e);
@@ -988,22 +1243,48 @@ export default function App() {
 
   const handleSaveProfile = async (formData) => {
     if (!formData || !formData.name) return;
-    const updated = [...savedProfiles].filter(p => p && p.name);
-    const idx = updated.findIndex(p => p.name === formData.name && p.dob === formData.dob);
-    if (idx >= 0) updated[idx] = formData; else updated.push(formData);
     
-    setSavedProfiles(updated);
-    safeStorage.set('astroClients', updated);
+    console.log("🛠️ Step 1: Starting save for:", formData.name);
     
-    if (user && db) {
+    // 1. LOCAL SAVE
+    let currentList = [];
+    try {
+        const stored = window.localStorage.getItem('astroClients');
+        if (stored) currentList = JSON.parse(stored);
+    } catch(e) {}
+    
+    const idx = currentList.findIndex(p => p.name === formData.name);
+    if (idx >= 0) currentList[idx] = formData;
+    else currentList.push(formData);
+    
+    window.localStorage.setItem('astroClients', JSON.stringify(currentList));
+    setSavedProfiles([...currentList]);
+    console.log("🛠️ Step 2: Local storage updated.");
+
+    // 2. CLOUD SAVE
+    if (typeof db !== 'undefined') {
+        console.log("🛠️ Step 3: Firebase found! Attempting cloud save...");
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profiles', encodeURIComponent(`${formData.name}_${formData.dob}`)), formData);
-        } catch (e) {
-            console.error("Error saving profile to cloud:", e);
+            if (!auth.currentUser) {
+                console.log("🛠️ Step 4: Signing in anonymously...");
+                await signInAnonymously(auth);
+            }
+            const uid = auth.currentUser.uid;
+            const profileId = encodeURIComponent(`${formData.name}_${formData.dob}`);
+            const docRef = doc(db, 'artifacts', appId, 'users', uid, 'profiles', profileId);
+            
+            await setDoc(docRef, formData);
+            console.log("🔥 STEP 5: CLOUD SAVE SUCCESSFUL!");
+        } catch (error) {
+            console.error("❌ Firebase Error:", error);
         }
+    } else {
+        console.error("❌ Error: 'db' variable not found!");
     }
   };
-
+    
+    
+  
   const handleDeleteProfile = async (formData) => {
     if (!formData || !formData.name) return;
     const updated = savedProfiles.filter(p => p && p.name && !(p.name === formData.name && p.dob === formData.dob));
@@ -1156,7 +1437,18 @@ export default function App() {
       } else if (type === 'sav_house') {
           prompt = `Analyze the Ashtakavarga strength for ${userName}. Their ${house} House (${rashi}) has a Sarvashtakavarga (SAV) score of ${promptData.savScore} (28 is the average baseline). ${dasaContext} Act as an expert Parashari Astrologer. Write a highly personalized 3-4 sentence prediction explaining how this specific mathematical point total impacts their overall success, ease of results, and struggles in the matters of the ${house} house. ${personalCtx}`;
       }
+// --- 🔮 PRASHNA AI OVERRIDE ---
+    if (viewMode === 'prashna' && prashnaDetails?.question) {
+        prompt = `CRITICAL INSTRUCTION: You are analyzing a PRASHNA (Horary) chart for the current transit moment, NOT a natal birth chart. 
+THE CLIENT'S EXACT QUESTION IS: "${prashnaDetails.question}"
 
+RULES FOR THIS READING:
+1. Do NOT give a general life prediction or personality reading. 
+2. Analyze this specific clicked element strictly in the context of the client's question. 
+3. Based on Prashna Shastra rules, identify if this clicked house/planet relates to the 'Karya Bhava' (the house governing the query). Consider the Lagna Lord (the querent) and the Moon's application.
+4. Conclude with a focused, direct perspective on their question: "${prashnaDetails.question}".\n\n` + prompt;
+    }
+    // ------------------------------
       if (prompt) {
          const aiResponse = await AstroEngine.callGemini(prompt, userData.geminiKey, userData.formData.astroLevel, userData.formData.language);
          setPopupInfo(prev => prev ? ({ ...prev, aiText: aiResponse.text || aiResponse.error, isLoadingAI: false, error: aiResponse.error ? aiResponse.error : null }) : null);
@@ -1204,8 +1496,14 @@ export default function App() {
     setQaLoading(true); setQaResult(null);
     const lagnaName = safeStr(AstroEngine.SIDEREAL_RASIS[isNaN(lagnaIndex) ? 0 : lagnaIndex], ' ');
     const natalStr = natalPlanets.map(p => `${p.planet}${p.isRetro ? '(R)' : ''} in ${safeStr(AstroEngine.SIDEREAL_RASIS[p.rasiIndex], ' ')}`).join(', ');
-    const transitStr = transits.map(p => `${p.planet}${p.isRetro ? '(R)' : ''} in ${safeStr(AstroEngine.SIDEREAL_RASIS[p.rasiIndex], ' ')}`).join(', ');
-    const prompt = `Client Name: ${userData.formData.name || 'User'}. Ascendant: ${lagnaName}. Dasha: ${currentDasa.mahadasha} MD, ${currentDasa.antardasha} AD. Natal: ${natalStr}. Transit: ${transitStr}. ${getShadbalaCtxStr(AstroEngine.GRAHAS.filter(g=>g!=='Rahu'&&g!=='Ketu'))} Client asks: "${question}". Act as an expert Parashari Astrologer. Provide a highly personalized, deeply insightful, and compassionate 3 to 4 sentence prediction.${buildContextString(userData.formData)}`;
+    const transitStr = transits.map(p => `${p.planet}${p.isRetro ? '(R)' : ''} in ${safeStr(AstroEngine.SIDEREAL_RASIS[p.rasiIndex], '')}`).join(', ');
+
+    let savContext = "";
+    if (ashtakavargaData && ashtakavargaData.sav) {
+        savContext = ` SAV Scores (Houses 1-12 starting from Ascendant): ${ashtakavargaData.sav.join(', ')}.`;
+    }
+
+    const prompt = `Client Name: ${userData.formData.name || 'User'}. Ascendant: ${lagnaName}. Dasha: ${currentDasa.mahadasha} MD, ${currentDasa.antardasha} AD. Natal: ${natalStr}. Transit: ${transitStr}.${savContext} Question: ${question}`;
     const response = await AstroEngine.callGemini(prompt, userData.geminiKey, userData.formData.astroLevel, userData.formData.language);
     setQaResult(response.error ? { type: 'error', text: response.error } : { type: 'success', text: response.text, topic: question });
     setQaLoading(false); if (typeof predefinedTopic !== 'string') setQaInput('');
@@ -1259,7 +1557,7 @@ export default function App() {
 
   // Early Return for Auth
   if (!userData || !userData.formData) {
-    return <div className="min-h-screen bg-slate-200 font-sans p-4 flex items-center justify-center"><BirthForm onStartApp={setUserData} savedProfiles={savedProfiles} onSaveProfile={handleDeleteProfile} onDeleteProfile={handleDeleteProfile} /></div>;
+    return <div className="min-h-screen bg-slate-200 font-sans p-4 flex items-center justify-center"><BirthForm onDeleteProfile={handleDeleteProfile} onGoogleLogin={handleGoogleLogin} onSaveProfile={handleSaveProfile} onStartApp={setUserData} savedProfiles={savedProfiles} isLoggedIn={!!auth?.currentUser} /></div>;
   }
   
   // Safe variable assignment after auth
@@ -1297,7 +1595,7 @@ export default function App() {
               ) : (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold text-amber-600"><Cpu size={12} /> AI Prediction</div>
-                  <p className="text-sm text-slate-800 font-serif leading-relaxed italic border-l-2 border-amber-300 pl-3">{String(popupInfo.aiText || popupInfo.text)}</p>
+                  <p className="text-sm text-slate-800 font-serif leading-relaxed italic border-l-2 border-amber-300 pl-3 max-h-96 overflow-y-auto pr-4">{String(popupInfo.aiText || popupInfo.text)}</p>
                   
                   {popupInfo.conjunctionData && popupInfo.conjunctionData.planets && popupInfo.conjunctionData.planets.length > 1 ? (
                     <button onClick={handleConjunctionAnalysis} className="mt-4 w-full bg-amber-50 border border-amber-200 text-amber-800 py-2.5 px-4 rounded-lg hover:bg-amber-100 transition-colors shadow-sm font-bold text-xs">
@@ -1317,7 +1615,7 @@ export default function App() {
       ) : null}
 
       <div className="absolute top-0 left-0 w-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-center py-1.5 px-4 text-[10px] font-bold z-50 shadow-md flex justify-center gap-1.5">
-        <LogoSVG className="w-4 h-4" /> VedicAstrol Beta v1.0.0 (AI Live)
+        <LogoSVG className="w-4 h-4" /> VedicAstro 1.3.0 (AI Live)
       </div>
 
       {/* WIDESCREEN MAIN CONTAINER */}
@@ -1342,12 +1640,157 @@ export default function App() {
             {/* 1A. MAIN CHART (Row 1 Left) */}
             <div className={isExpert ? "col-span-1 md:col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 xl:col-span-2 xl:col-start-1 xl:row-start-1" : "col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-3"}>
                 <div className="flex flex-col items-center justify-center gap-2 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
-                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold mb-2">
+                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold mb-2 overflow-x-auto max-w-full">
                         <button onClick={()=>setViewMode('natal')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='natal'?'bg-amber-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Natal (D1)</button>
                         <button onClick={()=>setViewMode('transit')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='transit'?'bg-indigo-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Transits</button>
+                        
+                        {/* THE NEW PRASHNA BUTTON */}
+                        <button onClick={()=>setViewMode('prashna')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='prashna'?'bg-emerald-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Prashna</button>
+                        
                         {isExpert && <button onClick={()=>setViewMode('sav')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${viewMode==='sav'?'bg-purple-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}><Star size={12}/> SAV</button>}
                     </div>
-                    {isSouthIndian ? 
+                    
+                   {/* PRASHNA FORM OR ACTUAL CHARTS */}
+{viewMode === 'prashna' ? (
+  showPrashnaChart && prashnaChartData ? (
+            <div className="flex flex-col items-center w-full h-full min-h-[300px]">
+                 <div className="w-full flex justify-between items-center mb-4">
+              <h3 className="font-bold text-emerald-800 text-sm md:text-base border-b-2 border-emerald-500 pb-1">
+                  Prashna: {prashnaChartData.city}
+              </h3>
+              
+              <div className="flex gap-2">
+                  <button 
+                      onClick={getOverallPrashnaReading}
+                      className="text-[10px] md:text-xs bg-purple-100 hover:bg-purple-200 border border-purple-300 px-3 py-1 rounded-full text-purple-800 font-bold transition-all shadow-sm flex items-center gap-1"
+                  >
+                      <span>✨</span> Get Overall AI Reading
+                  </button>
+
+                  <button 
+                      onClick={() => setShowPrashnaChart(false)}
+                      className="text-[10px] md:text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-full text-slate-700 font-bold transition-colors"
+                  >
+                      ← Back
+                  </button>
+              </div>
+          </div>
+                 
+                 {isSouthIndian ? 
+                    <SouthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} /> : 
+                    <NorthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} />
+                 }
+            </div>
+        ) : (
+    <div className="w-full max-w-md mx-auto flex flex-col gap-5 mt-2 mb-4 text-left">
+            <h3 className="font-bold text-xl text-emerald-800 text-center border-b pb-2">Ask a Prashna</h3>
+
+            {/* 1. THE FAQ & QUESTION BOX */}
+            <div>
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">The Question</label>
+                
+                {/* FAQ Dropdown */}
+                <select 
+                    className="w-full p-2 mb-2 border border-emerald-300 rounded text-sm focus:border-emerald-500 outline-none bg-emerald-50 text-emerald-900 font-semibold cursor-pointer"
+                    onChange={(e) => {
+                        if (e.target.value) setPrashnaDetails({...prashnaDetails, question: e.target.value});
+                    }}
+                >
+                    <option value="">-- Select a Common FAQ --</option>
+                    
+                    <optgroup label="Career & Job">
+                        <option value="Will I receive a job offer from the company I interviewed with last week?">Will I receive a job offer from the interviewed company?</option>
+                        <option value="Should I accept the offer at Company A or wait for the offer at Company B?">Should I accept Offer A or wait for Offer B?</option>
+                        <option value="Will I be promoted in the next 3 months?">Will I be promoted in the next 3 months?</option>
+                        <option value="Should I start my own business at this time?">Should I start my own business at this time?</option>
+                    </optgroup>
+
+                    <optgroup label="Marriage & Relationships">
+                        <option value="Will my current relationship lead to marriage?">Will my current relationship lead to marriage?</option>
+                        <option value="Will I get married within the next 6-12 months?">Will I get married within the next 6-12 months?</option>
+                        <option value="Is this partner compatible for a long-term commitment?">Is this partner compatible for long-term commitment?</option>
+                    </optgroup>
+
+                    <optgroup label="Finance & Property">
+                        <option value="Will my pending business loan be approved within 30 days?">Will my pending business loan be approved soon?</option>
+                        <option value="Should I invest in the stock market this week?">Should I invest in the stock market this week?</option>
+                        <option value="Will the property purchase deal close in my favor?">Will the property purchase deal close in my favor?</option>
+                    </optgroup>
+
+                    <optgroup label="Health">
+                        <option value="Will I recover from this illness within a specific timeframe?">Will I recover from this illness soon?</option>
+                        <option value="Will my upcoming surgery be successful without complications?">Will my upcoming surgery be successful?</option>
+                    </optgroup>
+
+                    <optgroup label="Travel">
+                        <option value="Will my visa application be approved?">Will my visa application be approved?</option>
+                        <option value="Should I move abroad for work at this time?">Should I move abroad for work at this time?</option>
+                    </optgroup>
+
+                    <optgroup label="Lost Items">
+                        <option value="Will I find my lost item?">Will I find my lost item?</option>
+                        <option value="Where should I look for my misplaced wallet?">Where should I look for my misplaced wallet?</option>
+                    </optgroup>
+                </select>
+                
+                {/* Custom Text Input */}
+                <input type="text" placeholder="...or type a custom question here" 
+                    className="w-full p-2 border border-slate-300 rounded focus:border-emerald-500 outline-none text-sm"
+                    value={prashnaDetails.question}
+                    onChange={(e) => setPrashnaDetails({...prashnaDetails, question: e.target.value})}
+                />
+            </div>
+
+            {/* 2. DATE & TIME */}
+            <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Date</label>
+                    <input type="date" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
+                        value={prashnaDetails.date}
+                        onChange={(e) => setPrashnaDetails({...prashnaDetails, date: e.target.value})}
+                    />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Time</label>
+                    <input type="time" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
+                        value={prashnaDetails.time}
+                        onChange={(e) => setPrashnaDetails({...prashnaDetails, time: e.target.value})}
+                    />
+                </div>
+                <button
+                    onClick={() => {
+                        const now = new Date();
+                        const offset = now.getTimezoneOffset();
+                        now.setMinutes(now.getMinutes() - offset);
+                        const localISOTime = now.toISOString().slice(0,16);
+                        setPrashnaDetails({
+                            ...prashnaDetails,
+                            date: localISOTime.split('T')[0],
+                            time: localISOTime.split('T')[1]
+                        });
+                    }}
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2 px-3 rounded text-sm h-[38px] transition-colors"
+                >
+                    Set Now
+                </button>
+            </div>
+
+            {/* 3. AUTO LOCATION BADGE */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-2 text-sm text-slate-600">
+                <span>📍</span>
+                <span>Client location synced: <b>{userData?.formData?.currentCity || userData?.formData?.city || "Hyderabad"}</b></span>
+            </div>
+
+            {/* 4. GENERATE BUTTON */}
+            <button
+                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex justify-center items-center gap-2"
+                onClick={generatePrashnaChart}
+            >
+                <span>GENERATE PRASHNA CHART</span> <span>✨</span>
+            </button>
+        </div>
+)) : isSouthIndian ?
+
                         <SouthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} /> : 
                         <NorthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} />
                     }
@@ -1463,35 +1906,140 @@ export default function App() {
             </div>
             ) : null}
 
-            {/* 3. DASA TABLE */}
-            {isExpert ? (
-            <div className="col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-1 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-1 h-full">
-                <div className="bg-white border-2 border-green-800 rounded-2xl overflow-hidden shadow-sm w-full flex flex-col h-full min-h-[300px] xl:min-h-0">
-                    <div className="bg-green-800 text-white px-4 py-3 text-xs font-bold uppercase flex items-center gap-2 shrink-0"><Sparkles size={14}/> Vimshottari Dasa</div>
-                    <div className="p-4 bg-[#f4f4d0] shadow-inner shrink-0">
-                    <div className="text-[11px] uppercase text-green-800 font-bold mb-2 flex items-center justify-between">
-                        <span>Current</span>
-                        {currentDasa?.pdStart ? <span className="bg-white px-2 py-1 rounded text-slate-700 shadow-sm border border-green-200">{currentDasa.pdStart.toLocaleDateString('en-GB')}</span> : null}
-                    </div>
-                    <div className="flex items-center justify-center gap-3 bg-white p-3 rounded-xl border border-slate-300 shadow-sm text-base font-black font-serif mt-2">
-                        <span className={AstroEngine.PLANET_TEXT_COLORS[currentDasa?.mahadasha] || 'text-slate-400'}>{String(AstroEngine.PLANET_SHORTS[currentDasa?.mahadasha] || 'MD')}</span>
-                        <span className="text-slate-300 text-xs">▶</span>
-                        <span className={AstroEngine.PLANET_TEXT_COLORS[currentDasa?.antardasha] || 'text-slate-400'}>{String(AstroEngine.PLANET_SHORTS[currentDasa?.antardasha] || 'AD')}</span>
-                    </div>
-                    </div>
-                    <div className="bg-slate-50 flex-1 overflow-hidden flex flex-col border-t border-slate-200 min-h-[160px]">
-                        <select value="" onChange={() => {}} className="w-full h-full p-3 text-xs font-bold bg-transparent outline-none cursor-pointer text-slate-700 custom-scrollbar" size="6">
-                        <option value="" disabled className="text-slate-400 italic pb-2">Upcoming Antardashas</option>
-                        {upcomingDasas.map((dasa, i) => {
-                            const md = String(AstroEngine.PLANET_SHORTS[dasa.planets[0]]);
-                            const ad = String(AstroEngine.PLANET_SHORTS[dasa.planets[1]]);
-                            return (<option key={i} value={i} className="py-1.5">{md} ▶ {ad} • {String(dasa.dateStr)}</option>);
-                        })}
-                        </select>
-                    </div>
-                </div>
+            {/* 3. DASA TABLE & TIME CONTROL */}
+        {isExpert ? (
+          <div className="col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-1 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-1 flex flex-col gap-4 h-full">
+            
+            {/* DASA BOX (Flex-1 allows it to shrink and align perfectly with adjacent windows) */}
+            <div className="bg-white border-2 border-green-800 rounded-2xl overflow-hidden shadow-sm w-full flex-1 flex flex-col min-h-[200px]">
+              <div className="bg-green-800 text-white px-4 py-3 text-xs font-bold uppercase flex items-center gap-2 shrink-0"><Sparkles size={14}/> Vimshottari Dasa</div>
+              
+              <div className="bg-slate-50 flex-1 overflow-y-auto p-3 custom-scrollbar">
+                {upcomingDasas.filter(dasa => {
+                  // If no Date of Death exists, show all. Otherwise, hide dasas that start after DOD.
+                  if (!userData?.formData?.dod) return true;
+                  return new Date(dasa.dateStr) <= new Date(userData.formData.dod);
+                }).map((dasa, i) => {
+                  const md = String(AstroEngine.PLANET_SHORTS[dasa.planets[0]]);
+                  const ad = String(AstroEngine.PLANET_SHORTS[dasa.planets[1]]);
+                  const isCurrent = currentDasa && currentDasa.mahadasha === dasa.planets[0] && currentDasa.antardasha === dasa.planets[1];
+
+                  return (
+                    <details key={i} className={`mb-2 border rounded-xl shadow-sm group transition-all ${isCurrent ? 'bg-green-50 border-green-400 ring-1 ring-green-400' : 'bg-white border-slate-200'}`}>
+                      <summary className="list-none cursor-pointer p-3 text-sm font-bold flex items-center hover:bg-slate-50 transition-colors rounded-xl outline-none">
+                        <span className={`text-[10px] mr-3 transition-transform duration-200 group-open:rotate-90 ${isCurrent ? 'text-green-600' : 'text-blue-500'}`}>▶</span>
+                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[0]] || 'text-slate-700'}`}>{md}</span>
+                        <span className="text-slate-300 mx-1">▶</span>
+                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[1]] || 'text-slate-700'}`}>{ad}</span>
+                        <span className={`ml-auto text-xs ${isCurrent ? 'text-green-700 font-extrabold' : 'text-slate-500 font-normal'}`}>
+                          {isCurrent ? 'CURRENT' : String(dasa.dateStr)}
+                        </span>
+                      </summary>
+                      
+                      <div className="px-2 pb-2 pt-1 border-t border-slate-100 bg-slate-50/50 rounded-b-xl text-xs">
+                        {dasa.pd && dasa.pd.length > 0 ? (
+                          dasa.pd.map((pd, j) => {
+                            const pdName = String(AstroEngine.PLANET_SHORTS[pd.planet]);
+                            return (
+                              <div key={j} className="flex justify-between items-center py-1.5 px-6 text-slate-600 border-b border-slate-200/50 last:border-0 hover:bg-slate-100/50 rounded">
+                                <span className="flex gap-2">
+                                  <span className="text-slate-400">{md} - {ad} -</span> 
+                                  <span className={`font-bold ${AstroEngine.PLANET_TEXT_COLORS[pd.planet] || 'text-slate-700'}`}>{pdName}</span>
+                                </span>
+                                <span>{pd.dateStr}</span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-slate-400 italic px-4 py-2 text-center">PD calculations not available for this period.</div>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
             </div>
-            ) : null}
+
+            {/* TIME CONTROL BOX */}
+            <div className="bg-[#fdfbf6] border border-amber-200 rounded-2xl shadow-sm p-4 shrink-0 transition-all">
+              
+              {/* HEADER WITH NEW DIGITAL CLOCK DISPLAY */}
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-amber-200/50">
+                <div className="text-[11px] font-extrabold text-slate-700 uppercase flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> 
+                  TIME CONTROL
+                </div>
+                
+                {/* LIVE WATCH BADGE */}
+                <div className="bg-white border border-amber-200 px-2 py-1 rounded text-[10px] font-bold text-amber-700 shadow-inner tabular-nums tracking-wide">
+                  {time.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {/* CUSTOM RADIO */}
+                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="timeMode" 
+                    checked={!isRealtime} 
+                    onChange={() => setIsRealtime(false)}
+                    className="w-4 h-4 cursor-pointer accent-slate-800" 
+                  />
+                  <span className={!isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Custom</span>
+                </label>
+                
+                {/* REALTIME RADIO */}
+                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="timeMode" 
+                    checked={isRealtime} 
+                    onChange={() => {
+                      setIsRealtime(true);
+                      setTime(new Date()); 
+                    }}
+                    className="w-4 h-4 cursor-pointer accent-green-600" 
+                  />
+                  <div className="flex items-center gap-2">
+                    {isRealtime && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.6)]"></span>}
+                    <span className={isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Realtime</span>
+                  </div>
+                </label>
+
+                {/* EXPANDING TIME BUTTONS & EXACT CALENDAR PICKER */}
+                {!isRealtime && (
+                  <div className="mt-2 pt-3 border-t border-slate-200/60 animate-in slide-in-from-top-2 fade-in duration-200">
+                    
+                    {/* NEW: EXACT DATE/TIME INPUT */}
+                    <div className="mb-2">
+                      <input 
+                        type="datetime-local" 
+                        value={new Date(time.getTime() - time.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                        onChange={(e) => {
+                          if (e.target.value) setTime(new Date(e.target.value));
+                        }}
+                        className="w-full text-xs p-2 border border-amber-200 rounded-lg text-slate-700 bg-white shadow-inner focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-medium cursor-pointer"
+                      />
+                    </div>
+
+                    {/* QUICK JUMP BUTTONS */}
+                    <div className="flex justify-between gap-1">
+                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1D</button>
+                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1D</button>
+                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1M</button>
+                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1M</button>
+                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1Y</button>
+                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1Y</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        ) : null}
+
 
             {/* 4. DETECTED YOGAS */}
             {detectedYogas.length > 0 ? (
