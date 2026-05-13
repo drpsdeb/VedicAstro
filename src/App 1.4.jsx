@@ -916,82 +916,8 @@ const NorthIndianChart = ({ planets, lagnaIndex, onSymbolClick, chartType, viewM
     );
 };
 
-const UniversalGateway = ({ onSelectPath }) => {
-  return (
-    <div className="max-w-4xl mx-auto p-6 min-h-screen flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="text-center mb-12">
-        <h2 className="text-4xl font-extrabold text-slate-900 mb-3">VedicAstro Hub</h2>
-        <p className="text-slate-600 text-lg italic">"Wisdom for everyone, regardless of birth details."</p>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-        {/* PATH 1: NATAL */}
-        <button 
-          onClick={() => onSelectPath('natal', false)}
-          className="group bg-white p-8 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all border-2 border-slate-100 hover:border-emerald-500 text-left"
-        >
-          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">🕉️</div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-2">Natal Analysis</h3>
-          <p className="text-slate-500 mb-6 text-sm">Requires birth details. Saves to your secure profile.</p>
-          <div className="text-emerald-600 font-bold flex items-center gap-1">
-            Start Journey <span>→</span>
-          </div>
-        </button>
-
-        {/* PATH 2: PRASHNA (GUEST) */}
-        <button 
-          onClick={() => onSelectPath('prashna', true)}
-          className="group bg-white p-8 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all border-2 border-slate-100 hover:border-purple-500 text-left"
-        >
-          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">🔮</div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-2">Instant Prashna</h3>
-          <p className="text-slate-500 mb-6 text-sm">Ask any question now. No birth data needed. (Guest Mode - No Storage)</p>
-          <div className="text-purple-600 font-bold flex items-center gap-1">
-            Enter Guest Mode <span>→</span>
-          </div>
-        </button>
-      </div>
-
-      <div className="border-t pt-10 text-center">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Future Modules</p>
-        <div className="flex flex-wrap justify-center gap-3 opacity-50">
-          {['Matching', 'KP System', 'Nadi', 'Astrowatch', 'Gemini AI'].map(item => (
-            <span key={item} className="px-4 py-2 bg-slate-200 rounded-full text-[10px] font-bold">{item}</span>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default function App() {
   const [user, setUser] = useState(null);
-  const [activeModule, setActiveModule] = useState(null); // Controls Landing Page vs App
-  const [isGuestMode, setIsGuestMode] = useState(false);  // Bypasses Firebase
-  const handleSaveToDatabase = async (data) => {
-    // --- 🛡️ GUEST MODE CHECK ---
-    if (isGuestMode) {
-        console.log("Guest Mode Active: Skipping Firebase Save.");
-        return; // Exit the function before it touches Firebase
-    }
-
-    try {
-        // Your existing Firebase code (e.g., await addDoc(collection...))
-        console.log("Data saved to Firebase successfully.");
-    } catch (error) {
-        console.error("Firebase Error:", error);
-    }
-};
-const onSelectPath = (path, guest) => {
-        setIsGuestMode(guest);
-        setActiveModule(path);
-        // This ensures the correct view is set immediately
-        if (path === 'prashna') {
-            setViewMode('prashna');
-        } else {
-            setViewMode('natal');
-        }
-    };
   const [popupInfo, setPopupInfo] = useState(null); 
   const [qaInput, setQaInput] = useState('');
   const [qaLoading, setQaLoading] = useState(false);
@@ -1641,587 +1567,538 @@ RULES FOR THIS READING:
   const functionalNature = !isNaN(lagnaIndex) ? AstroEngine.FUNCTIONAL_ROLES[lagnaIndex] : null;
 
   return (
-    <div className="min-h-screen bg-[#ececd6] text-slate-800 font-sans flex flex-col">
-      {!activeModule ? (
-        /* PATH A: SHOW LANDING PAGE */
-        <UniversalGateway onSelectPath={onSelectPath} />
-      ) : (
-        /* PATH B: SHOW ACTUAL APP CONTENT */
-        <>
-          {/* NAVIGATION BAR */}
-          <div className="p-3 flex items-center justify-between bg-white/60 backdrop-blur-md border-b border-slate-300 sticky top-0 z-50">
-            <button 
-              onClick={() => setActiveModule(null)}
-              className="text-[10px] font-bold text-slate-500 hover:text-emerald-700 transition-all flex items-center gap-1 uppercase tracking-tighter"
-            >
-              ← Back to Hub
-            </button>
-            <div className="flex items-center gap-2">
-               <span className="text-[9px] font-black bg-slate-800 text-white px-1.5 py-0.5 rounded">v1.4.0</span>
-               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                 {isGuestMode ? "Guest Mode" : "Natal Profile"}
-               </span>
+    <div className={`min-h-screen bg-[#ececd6] text-slate-800 font-sans flex flex-col items-center overflow-x-hidden pt-12 md:pt-10`}>
+      
+      {/* GLOBAL MODAL */}
+      {popupInfo ? (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPopupInfo(null)}>
+          <div className="bg-[#fdfde8] border-2 border-amber-600 rounded-xl p-6 max-w-md w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setPopupInfo(null)} className="absolute top-3 right-3 text-slate-400 hover:text-red-500"><X size={20} /></button>
+            <div className="flex items-center gap-3 mb-4 border-b border-amber-200 pb-3">
+              <Star className="text-amber-500 shrink-0" size={28} />
+              <div>
+                <h3 className="font-bold font-serif text-xl text-green-900 leading-none mb-1">{String(popupInfo.title)}</h3>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{String(popupInfo.subtitle)}</p>
+              </div>
+            </div>
+
+            <div className="mb-4 bg-white p-4 rounded-lg shadow-inner border border-amber-100 min-h-[80px]">
+              {((popupInfo.aspectData && popupInfo.aspectData.length > 0) || popupInfo.exchangeData) && !popupInfo.isLoadingAI ? (
+                 <div className="mb-3 flex flex-col gap-1.5 border-b border-amber-100 pb-3">
+                    {popupInfo.exchangeData ? <div className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-bold"><Zap size={12} className="inline mr-1"/> Parivartana Yoga with {String(popupInfo.exchangeData)}</div> : null}
+                    {popupInfo.aspectData?.length > 0 ? <div className="text-[10px] bg-blue-50 text-blue-800 px-2 py-1 rounded font-bold"><Search size={12} className="inline mr-1"/> Drishti from: {String(popupInfo.aspectData.join(', '))}</div> : null}
+                 </div>
+              ) : null}
+
+              {popupInfo.isLoadingAI ? (
+                <div className="flex flex-col items-center gap-2 text-amber-600 py-4"><Loader2 className="w-6 h-6 animate-spin" /><span className="text-xs font-bold font-serif">Consulting AI...</span></div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold text-amber-600"><Cpu size={12} /> AI Prediction</div>
+                  <p className="text-sm text-slate-800 font-serif leading-relaxed italic border-l-2 border-amber-300 pl-3 max-h-96 overflow-y-auto pr-4">{String(popupInfo.aiText || popupInfo.text)}</p>
+                  
+                  {popupInfo.conjunctionData && popupInfo.conjunctionData.planets && popupInfo.conjunctionData.planets.length > 1 ? (
+                    <button onClick={handleConjunctionAnalysis} className="mt-4 w-full bg-amber-50 border border-amber-200 text-amber-800 py-2.5 px-4 rounded-lg hover:bg-amber-100 transition-colors shadow-sm font-bold text-xs">
+                        <Sparkles size={16} className="inline mr-1 text-amber-600" /> Analyze Conjunction
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            {/* CLASSICAL VEDIC LORE FALLBACK */}
+            <div>
+               <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1">Classical Significance</div>
+               <p className="text-sm text-slate-600 font-serif leading-relaxed whitespace-pre-wrap">{String(popupInfo.text)}</p>
             </div>
           </div>
+        </div>
+      ) : null}
 
-          {/* WRAP YOUR OLD CONTENT HERE */}
-          <div className="flex-1">
-             {/* 
-                   <div className={`min-h-screen bg-[#ececd6] text-slate-800 font-sans flex flex-col items-center overflow-x-hidden pt-12 md:pt-10`}>
-                      
-                      {/* GLOBAL MODAL */}
-                      {popupInfo ? (
-                        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPopupInfo(null)}>
-                          <div className="bg-[#fdfde8] border-2 border-amber-600 rounded-xl p-6 max-w-md w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setPopupInfo(null)} className="absolute top-3 right-3 text-slate-400 hover:text-red-500"><X size={20} /></button>
-                            <div className="flex items-center gap-3 mb-4 border-b border-amber-200 pb-3">
-                              <Star className="text-amber-500 shrink-0" size={28} />
-                              <div>
-                                <h3 className="font-bold font-serif text-xl text-green-900 leading-none mb-1">{String(popupInfo.title)}</h3>
-                                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{String(popupInfo.subtitle)}</p>
-                              </div>
-                            </div>
-                
-                            <div className="mb-4 bg-white p-4 rounded-lg shadow-inner border border-amber-100 min-h-[80px]">
-                              {((popupInfo.aspectData && popupInfo.aspectData.length > 0) || popupInfo.exchangeData) && !popupInfo.isLoadingAI ? (
-                                 <div className="mb-3 flex flex-col gap-1.5 border-b border-amber-100 pb-3">
-                                    {popupInfo.exchangeData ? <div className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-bold"><Zap size={12} className="inline mr-1"/> Parivartana Yoga with {String(popupInfo.exchangeData)}</div> : null}
-                                    {popupInfo.aspectData?.length > 0 ? <div className="text-[10px] bg-blue-50 text-blue-800 px-2 py-1 rounded font-bold"><Search size={12} className="inline mr-1"/> Drishti from: {String(popupInfo.aspectData.join(', '))}</div> : null}
-                                 </div>
-                              ) : null}
-                
-                              {popupInfo.isLoadingAI ? (
-                                <div className="flex flex-col items-center gap-2 text-amber-600 py-4"><Loader2 className="w-6 h-6 animate-spin" /><span className="text-xs font-bold font-serif">Consulting AI...</span></div>
-                              ) : (
-                                <div>
-                                  <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold text-amber-600"><Cpu size={12} /> AI Prediction</div>
-                                  <p className="text-sm text-slate-800 font-serif leading-relaxed italic border-l-2 border-amber-300 pl-3 max-h-96 overflow-y-auto pr-4">{String(popupInfo.aiText || popupInfo.text)}</p>
-                                  
-                                  {popupInfo.conjunctionData && popupInfo.conjunctionData.planets && popupInfo.conjunctionData.planets.length > 1 ? (
-                                    <button onClick={handleConjunctionAnalysis} className="mt-4 w-full bg-amber-50 border border-amber-200 text-amber-800 py-2.5 px-4 rounded-lg hover:bg-amber-100 transition-colors shadow-sm font-bold text-xs">
-                                        <Sparkles size={16} className="inline mr-1 text-amber-600" /> Analyze Conjunction
-                                    </button>
-                                  ) : null}
-                                </div>
-                              )}
-                            </div>
-                            {/* CLASSICAL VEDIC LORE FALLBACK */}
-                            <div>
-                               <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1">Classical Significance</div>
-                               <p className="text-sm text-slate-600 font-serif leading-relaxed whitespace-pre-wrap">{String(popupInfo.text)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                
-                      {/* TOP ORANGE BANNER WITH HOME BUTTON */}
-    <div className="absolute top-0 left-0 w-full bg-gradient-to-r from-amber-600 to-amber-500 text-white py-1.5 px-4 text-[11px] font-bold z-50 shadow-md flex justify-between items-center">
-      
-      {/* LEFT: The New Home Button */}
-      <button 
-        onClick={() => setActiveModule(null)}
-        className="flex items-center gap-1 bg-black/20 hover:bg-black/40 px-3 py-1 rounded transition-all cursor-pointer z-50"
-      >
-        ← Back to Hub
-      </button>
-
-      {/* CENTER: The App Title */}
-      <div className="flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2 pointer-events-none">
-        <LogoSVG className="w-4 h-4" /> 
-        <span>VedicAstro 1.5.0 (AI Live)</span>
+      <div className="absolute top-0 left-0 w-full bg-gradient-to-r from-amber-600 to-amber-500 text-white text-center py-1.5 px-4 text-[10px] font-bold z-50 shadow-md flex justify-center gap-1.5">
+        <LogoSVG className="w-4 h-4" /> VedicAstro 1.5.0 (AI Live)
       </div>
 
-      {/* RIGHT: Status Indicator */}
-      <div className="uppercase tracking-widest text-[9px] opacity-80 bg-black/10 px-2 py-1 rounded">
-        {isGuestMode ? "Guest Mode" : "Profile Mode"}
-      </div>
+      {/* WIDESCREEN MAIN CONTAINER */}
+      <div className="w-full max-w-[1500px] mx-auto px-4 pt-6 md:pt-10 flex flex-col items-center">
+        
+        {/* TOP BAR */}
+        <div className="w-full bg-[#fdfde8] p-2 text-xs border border-slate-300 flex justify-between items-center shadow-sm z-10 font-serif font-bold text-green-900 rounded-lg mb-6 shrink-0">
+          <div className="flex items-center gap-2">
+            <Cloud size={16} className="text-blue-500" />
+            <select className="bg-transparent border border-green-700/30 rounded px-2 py-1 outline-none text-green-900 font-bold max-w-[120px] md:max-w-none" value={(() => { const idx = savedProfiles.findIndex(c => c && c.name === userData.formData.name && c.dob === userData.formData.dob); return idx >= 0 ? String(idx) : ''; })()} onChange={handleTopBarProfileSwitch}>
+              <option value="" disabled>Select Profile</option>
+              {savedProfiles.map((client, idx) => (client && client.name) ? <option key={idx} value={String(idx)}>{String(client.name)}</option> : null)}
+            </select>
+            <button onClick={() => setUserData(null)} className="p-1.5 hover:bg-green-100 rounded text-green-800 border border-transparent hover:border-green-300 shadow-sm"><Settings size={14} /></button>
+          </div>
+          <span className="hidden md:inline text-right opacity-80 truncate pl-4">{String(userData.formData.dob)} {String(userData.formData.time)} | Birth: {String(userData.formData.city)}</span>
+        </div>
 
-    </div>
-                
-                      {/* WIDESCREEN MAIN CONTAINER */}
-                      <div className="w-full max-w-[1500px] mx-auto px-4 pt-6 md:pt-10 flex flex-col items-center">
+        {/* ADVANCED 4-COLUMN RESPONSIVE GRID SYSTEM */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 xl:grid-cols-4 gap-6 items-stretch">
+            
+            {/* 1A. MAIN CHART (Row 1 Left) */}
+            <div className={isExpert ? "col-span-1 md:col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 xl:col-span-2 xl:col-start-1 xl:row-start-1" : "col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-3"}>
+                <div className="flex flex-col items-center justify-center gap-2 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
+                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold mb-2 overflow-x-auto max-w-full">
+                        <button onClick={()=>setViewMode('natal')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='natal'?'bg-amber-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Natal (D1)</button>
+                        <button onClick={()=>setViewMode('transit')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='transit'?'bg-indigo-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Transits</button>
                         
-                        {/* TOP BAR */}
-                        <div className="w-full bg-[#fdfde8] p-2 text-xs border border-slate-300 flex justify-between items-center shadow-sm z-10 font-serif font-bold text-green-900 rounded-lg mb-6 shrink-0">
-                          <div className="flex items-center gap-2">
-                            <Cloud size={16} className="text-blue-500" />
-                            <select className="bg-transparent border border-green-700/30 rounded px-2 py-1 outline-none text-green-900 font-bold max-w-[120px] md:max-w-none" value={(() => { const idx = savedProfiles.findIndex(c => c && c.name === userData.formData.name && c.dob === userData.formData.dob); return idx >= 0 ? String(idx) : ''; })()} onChange={handleTopBarProfileSwitch}>
-                              <option value="" disabled>Select Profile</option>
-                              {savedProfiles.map((client, idx) => (client && client.name) ? <option key={idx} value={String(idx)}>{String(client.name)}</option> : null)}
-                            </select>
-                            <button onClick={() => setUserData(null)} className="p-1.5 hover:bg-green-100 rounded text-green-800 border border-transparent hover:border-green-300 shadow-sm"><Settings size={14} /></button>
-                          </div>
-                          <span className="hidden md:inline text-right opacity-80 truncate pl-4">{String(userData.formData.dob)} {String(userData.formData.time)} | Birth: {String(userData.formData.city)}</span>
-                        </div>
-                
-                        {/* ADVANCED 4-COLUMN RESPONSIVE GRID SYSTEM */}
-                        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 xl:grid-cols-4 gap-6 items-stretch">
-                            
-                            {/* 1A. MAIN CHART (Row 1 Left) */}
-                            <div className={isExpert ? "col-span-1 md:col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 xl:col-span-2 xl:col-start-1 xl:row-start-1" : "col-span-1 md:col-span-2 lg:col-span-4 xl:col-span-3"}>
-                                <div className="flex flex-col items-center justify-center gap-2 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
-                                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold mb-2 overflow-x-auto max-w-full">
-                                        <button onClick={()=>setViewMode('natal')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='natal'?'bg-amber-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Natal (D1)</button>
-                                        <button onClick={()=>setViewMode('transit')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='transit'?'bg-indigo-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Transits</button>
-                                        
-                                        {/* THE NEW PRASHNA BUTTON */}
-                                        <button onClick={()=>setViewMode('prashna')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='prashna'?'bg-emerald-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Prashna</button>
-                                        
-                                        {isExpert && <button onClick={()=>setViewMode('sav')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${viewMode==='sav'?'bg-purple-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}><Star size={12}/> SAV</button>}
-                                    </div>
-                                    
-                                   {/* PRASHNA FORM OR ACTUAL CHARTS */}
-                {viewMode === 'prashna' ? (
-                  showPrashnaChart && prashnaChartData ? (
-                            <div className="flex flex-col items-center w-full h-full min-h-[300px]">
-                                 <div className="w-full flex justify-between items-center mb-4">
-                              <h3 className="font-bold text-emerald-800 text-sm md:text-base border-b-2 border-emerald-500 pb-1">
-                                  Prashna: {prashnaChartData.city}
-                              </h3>
-                              
-                              <div className="flex gap-2">
-                                  <button 
-                                      onClick={getOverallPrashnaReading}
-                                      className="text-[10px] md:text-xs bg-purple-100 hover:bg-purple-200 border border-purple-300 px-3 py-1 rounded-full text-purple-800 font-bold transition-all shadow-sm flex items-center gap-1"
-                                  >
-                                      <span>✨</span> Get Overall AI Reading
-                                  </button>
-                
-                                  <button 
-                                      onClick={() => setShowPrashnaChart(false)}
-                                      className="text-[10px] md:text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-full text-slate-700 font-bold transition-colors"
-                                  >
-                                      ← Back
-                                  </button>
-                              </div>
-                          </div>
-                                 
-                                 {isSouthIndian ? 
-                                    <SouthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} /> : 
-                                    <NorthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} />
-                                 }
-                            </div>
-                        ) : (
-                    <div className="w-full max-w-md mx-auto flex flex-col gap-5 mt-2 mb-4 text-left">
-                            <h3 className="font-bold text-xl text-emerald-800 text-center border-b pb-2">Ask a Prashna</h3>
-                
-                            {/* 1. THE FAQ & QUESTION BOX */}
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">The Question</label>
-                                
-                                {/* FAQ Dropdown */}
-                                <select 
-                                    className="w-full p-2 mb-2 border border-emerald-300 rounded text-sm focus:border-emerald-500 outline-none bg-emerald-50 text-emerald-900 font-semibold cursor-pointer"
-                                    onChange={(e) => {
-                                        if (e.target.value) setPrashnaDetails({...prashnaDetails, question: e.target.value});
-                                    }}
-                                >
-                                    <option value="">-- Select a Common FAQ --</option>
-                                    
-                                    <optgroup label="Career & Job">
-                                        <option value="Will I receive a job offer from the company I interviewed with last week?">Will I receive a job offer from the interviewed company?</option>
-                                        <option value="Should I accept the offer at Company A or wait for the offer at Company B?">Should I accept Offer A or wait for Offer B?</option>
-                                        <option value="Will I be promoted in the next 3 months?">Will I be promoted in the next 3 months?</option>
-                                        <option value="Should I start my own business at this time?">Should I start my own business at this time?</option>
-                                    </optgroup>
-                
-                                    <optgroup label="Marriage & Relationships">
-                                        <option value="Will my current relationship lead to marriage?">Will my current relationship lead to marriage?</option>
-                                        <option value="Will I get married within the next 6-12 months?">Will I get married within the next 6-12 months?</option>
-                                        <option value="Is this partner compatible for a long-term commitment?">Is this partner compatible for long-term commitment?</option>
-                                    </optgroup>
-                
-                                    <optgroup label="Finance & Property">
-                                        <option value="Will my pending business loan be approved within 30 days?">Will my pending business loan be approved soon?</option>
-                                        <option value="Should I invest in the stock market this week?">Should I invest in the stock market this week?</option>
-                                        <option value="Will the property purchase deal close in my favor?">Will the property purchase deal close in my favor?</option>
-                                    </optgroup>
-                
-                                    <optgroup label="Health">
-                                        <option value="Will I recover from this illness within a specific timeframe?">Will I recover from this illness soon?</option>
-                                        <option value="Will my upcoming surgery be successful without complications?">Will my upcoming surgery be successful?</option>
-                                    </optgroup>
-                
-                                    <optgroup label="Travel">
-                                        <option value="Will my visa application be approved?">Will my visa application be approved?</option>
-                                        <option value="Should I move abroad for work at this time?">Should I move abroad for work at this time?</option>
-                                    </optgroup>
-                
-                                    <optgroup label="Lost Items">
-                                        <option value="Will I find my lost item?">Will I find my lost item?</option>
-                                        <option value="Where should I look for my misplaced wallet?">Where should I look for my misplaced wallet?</option>
-                                    </optgroup>
-                                </select>
-                                
-                                {/* Custom Text Input */}
-                                <input type="text" placeholder="...or type a custom question here" 
-                                    className="w-full p-2 border border-slate-300 rounded focus:border-emerald-500 outline-none text-sm"
-                                    value={prashnaDetails.question}
-                                    onChange={(e) => setPrashnaDetails({...prashnaDetails, question: e.target.value})}
-                                />
-                            </div>
-                
-                            {/* 2. DATE & TIME */}
-                            <div className="flex gap-2 items-end">
-                                <div className="flex-1">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Date</label>
-                                    <input type="date" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
-                                        value={prashnaDetails.date}
-                                        onChange={(e) => setPrashnaDetails({...prashnaDetails, date: e.target.value})}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Time</label>
-                                    <input type="time" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
-                                        value={prashnaDetails.time}
-                                        onChange={(e) => setPrashnaDetails({...prashnaDetails, time: e.target.value})}
-                                    />
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const now = new Date();
-                                        const offset = now.getTimezoneOffset();
-                                        now.setMinutes(now.getMinutes() - offset);
-                                        const localISOTime = now.toISOString().slice(0,16);
-                                        setPrashnaDetails({
-                                            ...prashnaDetails,
-                                            date: localISOTime.split('T')[0],
-                                            time: localISOTime.split('T')[1]
-                                        });
-                                    }}
-                                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2 px-3 rounded text-sm h-[38px] transition-colors"
-                                >
-                                    Set Now
-                                </button>
-                            </div>
-                
-                            {/* 3. AUTO LOCATION BADGE */}
-                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-2 text-sm text-slate-600">
-                                <span>📍</span>
-                                <span>Client location synced: <b>{userData?.formData?.currentCity || userData?.formData?.city || "Hyderabad"}</b></span>
-                            </div>
-                
-                            {/* 4. GENERATE BUTTON */}
-                            <button
-                                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex justify-center items-center gap-2"
-                                onClick={generatePrashnaChart}
-                            >
-                                <span>GENERATE PRASHNA CHART</span> <span>✨</span>
-                            </button>
-                        </div>
-                )) : isSouthIndian ?
-                
-                                        <SouthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} /> : 
-                                        <NorthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} />
-                                    }
-                                </div>
-                            </div>
-                
-                            {/* 1B. SUB CHARTS (Row 2 Left) */}
-                            {isExpert && (
-                            <div className="col-span-1 md:col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-2 xl:col-span-2 xl:col-start-1 xl:row-start-2">
-                                <div className="flex flex-col items-center justify-center gap-2 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
-                                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold w-full max-w-md overflow-x-auto no-scrollbar mb-2">
-                                        <button onClick={()=>setSubChart('d9')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d9'?'bg-purple-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D9 (Navamsha)</button>
-                                        <button onClick={()=>setSubChart('d10')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d10'?'bg-blue-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D10 (Dashamsha)</button>
-                                        <button onClick={()=>setSubChart('d6')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d6'?'bg-red-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D6 (Shashthamsha)</button>
-                                        <button onClick={()=>setSubChart('d20')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d20'?'bg-emerald-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D20 (Vimshamsha)</button>
-                                    </div>
-                                    {subChart === 'd9' ? (isSouthIndian ? <SouthIndianChart planets={d9Planets} lagnaIndex={d9LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d9" /> : <NorthIndianChart planets={d9Planets} lagnaIndex={d9LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d9" />) : null}
-                                    {subChart === 'd10' ? (isSouthIndian ? <SouthIndianChart planets={d10Planets} lagnaIndex={d10LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d10" /> : <NorthIndianChart planets={d10Planets} lagnaIndex={d10LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d10" />) : null}
-                                    {subChart === 'd6' ? (isSouthIndian ? <SouthIndianChart planets={d6Planets} lagnaIndex={d6LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d6" /> : <NorthIndianChart planets={d6Planets} lagnaIndex={d6LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d6" />) : null}
-                                    {subChart === 'd20' ? (isSouthIndian ? <SouthIndianChart planets={d20Planets} lagnaIndex={d20LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d20" /> : <NorthIndianChart planets={d20Planets} lagnaIndex={d20LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d20" />) : null}
-                                </div>
-                            </div>
-                            )}
-                
-                            {/* 2. MID-TOP: Panchang & Functional Nature / Shadbala */}
-                            {isExpert && (panchang || functionalNature) ? (
-                            <div className="flex flex-col gap-6 col-span-1 md:col-span-2 lg:col-span-2 lg:col-start-5 lg:row-start-1 xl:col-span-1 xl:col-start-3 xl:row-start-1 h-full">
-                                
-                                {/* PANCHANG READOUT */}
-                                {panchang || natalPanchang ? (
-                                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm shrink-0">
-                                    <div className="text-xs uppercase tracking-widest text-amber-800 font-bold mb-3 flex items-center justify-between border-b border-amber-200 pb-2">
-                                    <span className="flex items-center gap-1.5"><Star size={14} className="text-amber-600"/> Panchang</span>
-                                    <div className="flex bg-amber-200/50 rounded-full p-0.5">
-                                        <button type="button" onClick={() => setPanchangView('natal')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${panchangView === 'natal' ? 'bg-amber-500 text-white shadow-sm' : 'text-amber-800 hover:bg-amber-300'}`}>Natal</button>
-                                        <button type="button" onClick={() => setPanchangView('transit')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${panchangView === 'transit' ? 'bg-amber-500 text-white shadow-sm' : 'text-amber-800 hover:bg-amber-300'}`}>Transit</button>
-                                    </div>
-                                    </div>
-                                    {(() => {
-                                    const act = panchangView === 'transit' ? panchang : natalPanchang;
-                                    if (!act) return null;
-                                    return (
-                                        <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[11px] text-slate-800 font-serif cursor-pointer hover:bg-amber-100 p-2 -mx-2 rounded transition-colors" onClick={() => handleSymbolClick({ title: `${panchangView === 'natal' ? 'Natal' : 'Transit'} Panchang`, subtitle: `The 5 Limbs`, text: `Vara: ${act.vara}\nTithi: ${act.tithi}\nMonth: ${act.month}\nYear: ${act.year}\nNakshatra: ${act.nakshatra}\nYoga: ${act.yoga}\nKarana: ${act.karana}`, promptData: { type: 'panchang', panchangType: panchangView, data: act } })}>
-                                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Vara (Day)</span> {String(act.vara)}</div>
-                                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Tithi (Phase)</span> {String(act.tithi)}</div>
-                                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Lunar Month</span> {String(act.month)}</div>
-                                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Samvat Year</span> {String(act.year)}</div>
-                                        <div className="col-span-2"><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Nakshatra</span> {String(act.nakshatra)}</div>
-                                        </div>
-                                    );
-                                    })()}
-                                </div>
-                                ) : null}
-                
-                                {/* FUNCTIONAL NATURE & SHADBALA TOGGLE */}
-                                {functionalNature || shadbalaScores ? (
-                                <div className="bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-sm w-full flex-1 flex flex-col min-h-0">
-                                    <div className="bg-slate-100 text-slate-700 px-4 py-3 text-xs font-bold uppercase flex items-center justify-between border-b border-slate-200 shrink-0">
-                                        <span className="flex items-center gap-2"><ShieldAlert size={14} className="text-slate-500"/> Dignity & Strength</span>
-                                        <div className="flex bg-slate-200 rounded-full p-0.5">
-                                            <button type="button" onClick={() => setFunctionalTab('roles')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${functionalTab === 'roles' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300'}`}>Roles</button>
-                                            <button type="button" onClick={() => setFunctionalTab('shadbala')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${functionalTab === 'shadbala' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300'}`}>Shadbala</button>
-                                        </div>
-                                    </div>
-                                    
-                                    {functionalTab === 'roles' && functionalNature ? (
-                                    <div className="p-4 bg-white grid grid-cols-1 gap-4 flex-1 content-start overflow-y-auto">
-                                        <div>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Benefics</div>
-                                            <div className="flex flex-wrap gap-2">{functionalNature.ben.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.ben.map(p => (<span key={`ben-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Benefic`, subtitle: `Functional Role`, text: `${p} acts as a positive force for this Ascendant.`, promptData: { type: 'functional', planet: p, role: 'Benefic' }})} className="text-[11px] font-bold px-2 py-1 rounded bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Malefics</div>
-                                            <div className="flex flex-wrap gap-2">{functionalNature.mal.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.mal.map(p => (<span key={`mal-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Malefic`, subtitle: `Functional Role`, text: `${p} acts as a challenging force for this Ascendant.`, promptData: { type: 'functional', planet: p, role: 'Malefic' }})} className="text-[11px] font-bold px-2 py-1 rounded bg-red-50 border border-red-200 cursor-pointer hover:bg-red-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 mt-auto shrink-0">
-                                            <div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Maraka</div>
-                                                <div className="flex flex-wrap gap-1.5">{functionalNature.mar.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.mar.map(p => (<span key={`mar-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Maraka`, subtitle: `Functional Role`, text: `${p} acts as a death-inflicting or transforming force.`, promptData: { type: 'functional', planet: p, role: 'Maraka' }})} className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 border border-purple-200 cursor-pointer hover:bg-purple-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Badhaka</div>
-                                                <div className="flex flex-wrap gap-1.5">{functionalNature.bad.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.bad.map(p => (<span key={`bad-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Badhaka`, subtitle: `Functional Role`, text: `${p} acts as an obstructing or delaying force.`, promptData: { type: 'functional', planet: p, role: 'Badhaka' }})} className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 border border-orange-200 cursor-pointer hover:bg-orange-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-2 text-[9px] text-slate-400 font-bold flex items-center gap-1 shrink-0"><Cpu size={11}/> AI analysis available on click</div>
-                                    </div>
-                                    ) : null}
-                
-                                    {functionalTab === 'shadbala' && shadbalaScores ? (
-                                    <div className="p-4 bg-white flex flex-col gap-2.5 flex-1 overflow-y-auto min-h-0">
-                                        {AstroEngine.GRAHAS.filter(g => g !== 'Rahu' && g !== 'Ketu').map(p => {
-                                            const score = shadbalaScores?.[p];
-                                            if (!score) return null;
-                                            return (
-                                                <div key={p} onClick={() => handleSymbolClick({ title: `${p} Shadbala`, subtitle: `Planetary Strength`, text: `${p} has a mathematical Shadbala strength of ${score.percentage}%.`, promptData: { type: 'shadbala', planet: p, score: score.percentage }})} className="cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors group">
-                                                    <div className="flex justify-between items-center mb-1.5 text-[10px] font-bold">
-                                                        <span className={AstroEngine.PLANET_TEXT_COLORS[p]}>{p}</span>
-                                                        <span className="text-slate-500 group-hover:text-amber-600 transition-colors">{score.percentage}%</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
-                                                        <div className="bg-slate-400 h-1.5 rounded-full" style={{ width: `${Math.min(score.percentage, 100)}%` }}></div>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                        <div className="mt-auto pt-3 text-[9px] text-slate-400 font-bold flex items-center gap-1 shrink-0"><Cpu size={11}/> AI analysis available on click</div>
-                                    </div>
-                                    ) : null}
-                
-                                </div>
-                                ) : null}
-                            </div>
-                            ) : null}
-                
-                            {/* 3. DASA TABLE & TIME CONTROL */}
-                        {isExpert ? (
-                          <div className="col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-1 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-1 flex flex-col gap-4 h-full">
-                            
-                            {/* DASA BOX (Flex-1 allows it to shrink and align perfectly with adjacent windows) */}
-                            <div className="bg-white border-2 border-green-800 rounded-2xl overflow-hidden shadow-sm w-full flex-1 flex flex-col min-h-[200px]">
-                              <div className="bg-green-800 text-white px-4 py-3 text-xs font-bold uppercase flex items-center gap-2 shrink-0"><Sparkles size={14}/> Vimshottari Dasa</div>
-                              
-                              <div className="bg-slate-50 flex-1 overflow-y-auto p-3 custom-scrollbar">
-                                {upcomingDasas.filter(dasa => {
-                                  // If no Date of Death exists, show all. Otherwise, hide dasas that start after DOD.
-                                  if (!userData?.formData?.dod) return true;
-                                  return new Date(dasa.dateStr) <= new Date(userData.formData.dod);
-                                }).map((dasa, i) => {
-                                  const md = String(AstroEngine.PLANET_SHORTS[dasa.planets[0]]);
-                                  const ad = String(AstroEngine.PLANET_SHORTS[dasa.planets[1]]);
-                                  const isCurrent = currentDasa && currentDasa.mahadasha === dasa.planets[0] && currentDasa.antardasha === dasa.planets[1];
-                
-                                  return (
-                                    <details key={i} className={`mb-2 border rounded-xl shadow-sm group transition-all ${isCurrent ? 'bg-green-50 border-green-400 ring-1 ring-green-400' : 'bg-white border-slate-200'}`}>
-                                      <summary className="list-none cursor-pointer p-3 text-sm font-bold flex items-center hover:bg-slate-50 transition-colors rounded-xl outline-none">
-                                        <span className={`text-[10px] mr-3 transition-transform duration-200 group-open:rotate-90 ${isCurrent ? 'text-green-600' : 'text-blue-500'}`}>▶</span>
-                                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[0]] || 'text-slate-700'}`}>{md}</span>
-                                        <span className="text-slate-300 mx-1">▶</span>
-                                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[1]] || 'text-slate-700'}`}>{ad}</span>
-                                        <span className={`ml-auto text-xs ${isCurrent ? 'text-green-700 font-extrabold' : 'text-slate-500 font-normal'}`}>
-                                          {isCurrent ? 'CURRENT' : String(dasa.dateStr)}
-                                        </span>
-                                      </summary>
-                                      
-                                      <div className="px-2 pb-2 pt-1 border-t border-slate-100 bg-slate-50/50 rounded-b-xl text-xs">
-                                        {dasa.pd && dasa.pd.length > 0 ? (
-                                          dasa.pd.map((pd, j) => {
-                                            const pdName = String(AstroEngine.PLANET_SHORTS[pd.planet]);
-                                            return (
-                                              <div key={j} className="flex justify-between items-center py-1.5 px-6 text-slate-600 border-b border-slate-200/50 last:border-0 hover:bg-slate-100/50 rounded">
-                                                <span className="flex gap-2">
-                                                  <span className="text-slate-400">{md} - {ad} -</span> 
-                                                  <span className={`font-bold ${AstroEngine.PLANET_TEXT_COLORS[pd.planet] || 'text-slate-700'}`}>{pdName}</span>
-                                                </span>
-                                                <span>{pd.dateStr}</span>
-                                              </div>
-                                            );
-                                          })
-                                        ) : (
-                                          <div className="text-slate-400 italic px-4 py-2 text-center">PD calculations not available for this period.</div>
-                                        )}
-                                      </div>
-                                    </details>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                
-                            {/* TIME CONTROL BOX */}
-                            <div className="bg-[#fdfbf6] border border-amber-200 rounded-2xl shadow-sm p-4 shrink-0 transition-all">
-                              
-                              {/* HEADER WITH NEW DIGITAL CLOCK DISPLAY */}
-                              <div className="flex items-center justify-between mb-3 pb-3 border-b border-amber-200/50">
-                                <div className="text-[11px] font-extrabold text-slate-700 uppercase flex items-center gap-2">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> 
-                                  TIME CONTROL
-                                </div>
-                                
-                                {/* LIVE WATCH BADGE */}
-                                <div className="bg-white border border-amber-200 px-2 py-1 rounded text-[10px] font-bold text-amber-700 shadow-inner tabular-nums tracking-wide">
-                                  {time.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              </div>
-                
-                              <div className="flex flex-col gap-3">
-                                {/* CUSTOM RADIO */}
-                                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
-                                  <input 
-                                    type="radio" 
-                                    name="timeMode" 
-                                    checked={!isRealtime} 
-                                    onChange={() => setIsRealtime(false)}
-                                    className="w-4 h-4 cursor-pointer accent-slate-800" 
-                                  />
-                                  <span className={!isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Custom</span>
-                                </label>
-                                
-                                {/* REALTIME RADIO */}
-                                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
-                                  <input 
-                                    type="radio" 
-                                    name="timeMode" 
-                                    checked={isRealtime} 
-                                    onChange={() => {
-                                      setIsRealtime(true);
-                                      setTime(new Date()); 
-                                    }}
-                                    className="w-4 h-4 cursor-pointer accent-green-600" 
-                                  />
-                                  <div className="flex items-center gap-2">
-                                    {isRealtime && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.6)]"></span>}
-                                    <span className={isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Realtime</span>
-                                  </div>
-                                </label>
-                
-                                {/* EXPANDING TIME BUTTONS & EXACT CALENDAR PICKER */}
-                                {!isRealtime && (
-                                  <div className="mt-2 pt-3 border-t border-slate-200/60 animate-in slide-in-from-top-2 fade-in duration-200">
-                                    
-                                    {/* NEW: EXACT DATE/TIME INPUT */}
-                                    <div className="mb-2">
-                                      <input 
-                                        type="datetime-local" 
-                                        value={new Date(time.getTime() - time.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                                        onChange={(e) => {
-                                          if (e.target.value) setTime(new Date(e.target.value));
-                                        }}
-                                        className="w-full text-xs p-2 border border-amber-200 rounded-lg text-slate-700 bg-white shadow-inner focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-medium cursor-pointer"
-                                      />
-                                    </div>
-                
-                                    {/* QUICK JUMP BUTTONS */}
-                                    <div className="flex justify-between gap-1">
-                                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1D</button>
-                                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1D</button>
-                                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1M</button>
-                                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1M</button>
-                                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1Y</button>
-                                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1Y</button>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                
-                          </div>
-                        ) : null}
-                
-                
-                            {/* 4. DETECTED YOGAS */}
-                            {detectedYogas.length > 0 ? (
-                            <div className="col-span-1 md:col-span-2 lg:col-span-2 lg:col-start-5 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-2 h-full">
-                                <div className="bg-white border-2 border-indigo-200 rounded-2xl overflow-hidden shadow-sm w-full flex flex-col h-full min-h-0">
-                                    <div className="bg-indigo-100 text-indigo-800 px-4 py-3 text-xs font-bold uppercase flex items-center justify-between border-b border-indigo-200 shrink-0">
-                                        <span className="flex items-center gap-2"><Sparkles size={14}/> Classical Yogas</span>
-                                        <span className="bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full text-[10px]">{detectedYogas.length} Found</span>
-                                    </div>
-                                    <div className="p-4 bg-white flex flex-col gap-3 flex-1 overflow-y-auto min-h-0">
-                                        {detectedYogas.map((yoga, idx) => (
-                                            <div key={idx} onClick={() => handleSymbolClick({ title: yoga.name, subtitle: `Yoga Found`, text: yoga.desc, promptData: { type: 'yoga', yogaType: yoga.type, involvedPlanets: yoga.involved } })} className={`p-3 rounded-xl border ${yoga.bg} ${yoga.border} cursor-pointer hover:shadow-lg transition-shadow`}>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <h4 className={`font-bold font-serif text-sm ${yoga.color}`}>{yoga.name}</h4>
-                                                    <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-white border ${yoga.border} ${yoga.color}`}>{yoga.type}</span>
-                                                </div>
-                                                <p className="text-xs text-slate-700 leading-relaxed">{yoga.desc}</p>
-                                                <div className="mt-2.5 text-[9px] text-indigo-400 font-bold flex items-center gap-1"><Cpu size={11}/> AI analysis available on click</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            ) : null}
-                
-                            {/* 5. AI PANEL & EXTRA TOOLS */}
-                            <div className={isExpert ? "col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-4 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-2 h-full" : "col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-1 h-full"}>
-                                <div className="bg-white border-2 border-amber-300 rounded-2xl shadow-sm p-5 w-full flex flex-col h-full min-h-0">
-                                    <div className="text-sm font-bold mb-4 text-amber-800 font-serif uppercase flex items-center gap-2 shrink-0"><MessageCircle size={16} /> Ask Parashari AI</div>
-                                    <div className="flex gap-2 mb-4 shrink-0">
-                                        <input type="text" placeholder="Ask a question about your chart..." className="flex-1 p-3 border border-slate-300 rounded-xl text-sm outline-none shadow-inner" value={qaInput} onChange={e => setQaInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAskAI()} />
-                                        <button onClick={() => handleAskAI()} disabled={qaLoading} className="bg-amber-600 text-white p-3 rounded-xl shadow-sm hover:bg-amber-700 transition-colors shrink-0"><Search size={18}/></button>
-                                    </div>
-                                    {qaLoading ? <div className="p-4 text-center text-amber-600 text-xs font-bold uppercase flex flex-col items-center gap-2 shrink-0"><Loader2 size={24} className="animate-spin"/> Consulting stars...</div> : null}
-                                    {qaResult?.type === 'success' ? <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded shadow-inner overflow-y-auto"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(qaResult.text)}</p></div> : null}
-                                    
-                                    {/* The mt-auto dynamically pushes these tools to the absolute bottom if stretched */}
-                                    <div className="mt-auto border-t border-slate-200 pt-5 space-y-3 shrink-0">
-                                        <button onClick={handleGenerateMantra} disabled={mantraLoading} className="w-full bg-purple-50 text-purple-800 border border-purple-200 py-3 rounded-xl hover:bg-purple-100 font-bold shadow-sm flex items-center justify-center gap-2 text-xs transition-colors">
-                                        {mantraLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} Daily Prediction & Upaya
-                                        </button>
-                                        {mantraResult?.type === 'success' && <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(mantraResult.text)}</p></div>}
-                                        
-                                        <div className="flex gap-2">
-                                        <input type="text" placeholder="Describe a dream to decode..." className="flex-1 p-3 border border-slate-300 rounded-xl text-xs outline-none shadow-inner" value={dreamInput} onChange={e => setDreamInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleDreamDecode()} />
-                                        <button onClick={handleDreamDecode} disabled={dreamLoading} className="bg-purple-600 text-white p-3 rounded-xl shadow-sm hover:bg-purple-700 transition-colors shrink-0">{dreamLoading ? <Loader2 size={16} className="animate-spin"/> : <Moon size={16}/>}</button>
-                                        </div>
-                                        {dreamResult?.type === 'success' && <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(dreamResult.text)}</p></div>}
-                
-                                        <button onClick={handleLuckyElements} disabled={luckyLoading} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl shadow-sm text-xs font-bold flex items-center justify-center gap-2 transition-colors">
-                                        {luckyLoading ? <Loader2 size={16} className="animate-spin"/> : <Star size={16} className="text-amber-500"/>} Find Lucky Elements
-                                        </button>
-                                        {luckyResult?.type === 'success' && <div className="bg-emerald-50 border-l-4 border-emerald-500 p-4 mt-3 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(luckyResult.text)}</p></div>}
-                                    </div>
-                                </div>
-                            </div>
-                
-                        </div>
-                      </div>
+                        {/* THE NEW PRASHNA BUTTON */}
+                        <button onClick={()=>setViewMode('prashna')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors ${viewMode==='prashna'?'bg-emerald-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>Prashna</button>
+                        
+                        {isExpert && <button onClick={()=>setViewMode('sav')} className={`px-4 md:px-6 py-2 rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${viewMode==='sav'?'bg-purple-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}><Star size={12}/> SAV</button>}
                     </div>
-        </>
-      )}
+                    
+                   {/* PRASHNA FORM OR ACTUAL CHARTS */}
+{viewMode === 'prashna' ? (
+  showPrashnaChart && prashnaChartData ? (
+            <div className="flex flex-col items-center w-full h-full min-h-[300px]">
+                 <div className="w-full flex justify-between items-center mb-4">
+              <h3 className="font-bold text-emerald-800 text-sm md:text-base border-b-2 border-emerald-500 pb-1">
+                  Prashna: {prashnaChartData.city}
+              </h3>
+              
+              <div className="flex gap-2">
+                  <button 
+                      onClick={getOverallPrashnaReading}
+                      className="text-[10px] md:text-xs bg-purple-100 hover:bg-purple-200 border border-purple-300 px-3 py-1 rounded-full text-purple-800 font-bold transition-all shadow-sm flex items-center gap-1"
+                  >
+                      <span>✨</span> Get Overall AI Reading
+                  </button>
+
+                  <button 
+                      onClick={() => setShowPrashnaChart(false)}
+                      className="text-[10px] md:text-xs bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-full text-slate-700 font-bold transition-colors"
+                  >
+                      ← Back
+                  </button>
+              </div>
+          </div>
+                 
+                 {isSouthIndian ? 
+                    <SouthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} /> : 
+                    <NorthIndianChart planets={prashnaChartData.planets} lagnaIndex={prashnaChartData.lagnaIndex} onSymbolClick={handleSymbolClick} chartType="prashna" viewMode="prashna" avData={null} />
+                 }
+            </div>
+        ) : (
+    <div className="w-full max-w-md mx-auto flex flex-col gap-5 mt-2 mb-4 text-left">
+            <h3 className="font-bold text-xl text-emerald-800 text-center border-b pb-2">Ask a Prashna</h3>
+
+            {/* 1. THE FAQ & QUESTION BOX */}
+            <div>
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">The Question</label>
+                
+                {/* FAQ Dropdown */}
+                <select 
+                    className="w-full p-2 mb-2 border border-emerald-300 rounded text-sm focus:border-emerald-500 outline-none bg-emerald-50 text-emerald-900 font-semibold cursor-pointer"
+                    onChange={(e) => {
+                        if (e.target.value) setPrashnaDetails({...prashnaDetails, question: e.target.value});
+                    }}
+                >
+                    <option value="">-- Select a Common FAQ --</option>
+                    
+                    <optgroup label="Career & Job">
+                        <option value="Will I receive a job offer from the company I interviewed with last week?">Will I receive a job offer from the interviewed company?</option>
+                        <option value="Should I accept the offer at Company A or wait for the offer at Company B?">Should I accept Offer A or wait for Offer B?</option>
+                        <option value="Will I be promoted in the next 3 months?">Will I be promoted in the next 3 months?</option>
+                        <option value="Should I start my own business at this time?">Should I start my own business at this time?</option>
+                    </optgroup>
+
+                    <optgroup label="Marriage & Relationships">
+                        <option value="Will my current relationship lead to marriage?">Will my current relationship lead to marriage?</option>
+                        <option value="Will I get married within the next 6-12 months?">Will I get married within the next 6-12 months?</option>
+                        <option value="Is this partner compatible for a long-term commitment?">Is this partner compatible for long-term commitment?</option>
+                    </optgroup>
+
+                    <optgroup label="Finance & Property">
+                        <option value="Will my pending business loan be approved within 30 days?">Will my pending business loan be approved soon?</option>
+                        <option value="Should I invest in the stock market this week?">Should I invest in the stock market this week?</option>
+                        <option value="Will the property purchase deal close in my favor?">Will the property purchase deal close in my favor?</option>
+                    </optgroup>
+
+                    <optgroup label="Health">
+                        <option value="Will I recover from this illness within a specific timeframe?">Will I recover from this illness soon?</option>
+                        <option value="Will my upcoming surgery be successful without complications?">Will my upcoming surgery be successful?</option>
+                    </optgroup>
+
+                    <optgroup label="Travel">
+                        <option value="Will my visa application be approved?">Will my visa application be approved?</option>
+                        <option value="Should I move abroad for work at this time?">Should I move abroad for work at this time?</option>
+                    </optgroup>
+
+                    <optgroup label="Lost Items">
+                        <option value="Will I find my lost item?">Will I find my lost item?</option>
+                        <option value="Where should I look for my misplaced wallet?">Where should I look for my misplaced wallet?</option>
+                    </optgroup>
+                </select>
+                
+                {/* Custom Text Input */}
+                <input type="text" placeholder="...or type a custom question here" 
+                    className="w-full p-2 border border-slate-300 rounded focus:border-emerald-500 outline-none text-sm"
+                    value={prashnaDetails.question}
+                    onChange={(e) => setPrashnaDetails({...prashnaDetails, question: e.target.value})}
+                />
+            </div>
+
+            {/* 2. DATE & TIME */}
+            <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Date</label>
+                    <input type="date" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
+                        value={prashnaDetails.date}
+                        onChange={(e) => setPrashnaDetails({...prashnaDetails, date: e.target.value})}
+                    />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 tracking-wider uppercase">Time</label>
+                    <input type="time" className="w-full p-2 border border-slate-300 rounded text-sm focus:border-emerald-500 outline-none"
+                        value={prashnaDetails.time}
+                        onChange={(e) => setPrashnaDetails({...prashnaDetails, time: e.target.value})}
+                    />
+                </div>
+                <button
+                    onClick={() => {
+                        const now = new Date();
+                        const offset = now.getTimezoneOffset();
+                        now.setMinutes(now.getMinutes() - offset);
+                        const localISOTime = now.toISOString().slice(0,16);
+                        setPrashnaDetails({
+                            ...prashnaDetails,
+                            date: localISOTime.split('T')[0],
+                            time: localISOTime.split('T')[1]
+                        });
+                    }}
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2 px-3 rounded text-sm h-[38px] transition-colors"
+                >
+                    Set Now
+                </button>
+            </div>
+
+            {/* 3. AUTO LOCATION BADGE */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-2 text-sm text-slate-600">
+                <span>📍</span>
+                <span>Client location synced: <b>{userData?.formData?.currentCity || userData?.formData?.city || "Hyderabad"}</b></span>
+            </div>
+
+            {/* 4. GENERATE BUTTON */}
+            <button
+                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex justify-center items-center gap-2"
+                onClick={generatePrashnaChart}
+            >
+                <span>GENERATE PRASHNA CHART</span> <span>✨</span>
+            </button>
+        </div>
+)) : isSouthIndian ?
+
+                        <SouthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} /> : 
+                        <NorthIndianChart planets={viewMode === 'natal' ? natalPlanets : transits} lagnaIndex={lagnaIndex} onSymbolClick={handleSymbolClick} chartType={viewMode === 'natal' ? 'natal' : (viewMode === 'transit' ? 'transit' : 'sav')} viewMode={viewMode} avData={ashtakavargaData} />
+                    }
+                </div>
+            </div>
+
+            {/* 1B. SUB CHARTS (Row 2 Left) */}
+            {isExpert && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-2 xl:col-span-2 xl:col-start-1 xl:row-start-2">
+                <div className="flex flex-col items-center justify-center gap-2 w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
+                    <div className="flex bg-slate-200 rounded-full p-1 text-[10px] md:text-xs font-bold w-full max-w-md overflow-x-auto no-scrollbar mb-2">
+                        <button onClick={()=>setSubChart('d9')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d9'?'bg-purple-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D9 (Navamsha)</button>
+                        <button onClick={()=>setSubChart('d10')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d10'?'bg-blue-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D10 (Dashamsha)</button>
+                        <button onClick={()=>setSubChart('d6')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d6'?'bg-red-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D6 (Shashthamsha)</button>
+                        <button onClick={()=>setSubChart('d20')} className={`flex-1 px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${subChart==='d20'?'bg-emerald-600 text-white shadow':'text-slate-600 hover:bg-slate-300'}`}>D20 (Vimshamsha)</button>
+                    </div>
+                    {subChart === 'd9' ? (isSouthIndian ? <SouthIndianChart planets={d9Planets} lagnaIndex={d9LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d9" /> : <NorthIndianChart planets={d9Planets} lagnaIndex={d9LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d9" />) : null}
+                    {subChart === 'd10' ? (isSouthIndian ? <SouthIndianChart planets={d10Planets} lagnaIndex={d10LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d10" /> : <NorthIndianChart planets={d10Planets} lagnaIndex={d10LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d10" />) : null}
+                    {subChart === 'd6' ? (isSouthIndian ? <SouthIndianChart planets={d6Planets} lagnaIndex={d6LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d6" /> : <NorthIndianChart planets={d6Planets} lagnaIndex={d6LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d6" />) : null}
+                    {subChart === 'd20' ? (isSouthIndian ? <SouthIndianChart planets={d20Planets} lagnaIndex={d20LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d20" /> : <NorthIndianChart planets={d20Planets} lagnaIndex={d20LagnaIndex} onSymbolClick={handleSymbolClick} chartType="d20" />) : null}
+                </div>
+            </div>
+            )}
+
+            {/* 2. MID-TOP: Panchang & Functional Nature / Shadbala */}
+            {isExpert && (panchang || functionalNature) ? (
+            <div className="flex flex-col gap-6 col-span-1 md:col-span-2 lg:col-span-2 lg:col-start-5 lg:row-start-1 xl:col-span-1 xl:col-start-3 xl:row-start-1 h-full">
+                
+                {/* PANCHANG READOUT */}
+                {panchang || natalPanchang ? (
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm shrink-0">
+                    <div className="text-xs uppercase tracking-widest text-amber-800 font-bold mb-3 flex items-center justify-between border-b border-amber-200 pb-2">
+                    <span className="flex items-center gap-1.5"><Star size={14} className="text-amber-600"/> Panchang</span>
+                    <div className="flex bg-amber-200/50 rounded-full p-0.5">
+                        <button type="button" onClick={() => setPanchangView('natal')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${panchangView === 'natal' ? 'bg-amber-500 text-white shadow-sm' : 'text-amber-800 hover:bg-amber-300'}`}>Natal</button>
+                        <button type="button" onClick={() => setPanchangView('transit')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${panchangView === 'transit' ? 'bg-amber-500 text-white shadow-sm' : 'text-amber-800 hover:bg-amber-300'}`}>Transit</button>
+                    </div>
+                    </div>
+                    {(() => {
+                    const act = panchangView === 'transit' ? panchang : natalPanchang;
+                    if (!act) return null;
+                    return (
+                        <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[11px] text-slate-800 font-serif cursor-pointer hover:bg-amber-100 p-2 -mx-2 rounded transition-colors" onClick={() => handleSymbolClick({ title: `${panchangView === 'natal' ? 'Natal' : 'Transit'} Panchang`, subtitle: `The 5 Limbs`, text: `Vara: ${act.vara}\nTithi: ${act.tithi}\nMonth: ${act.month}\nYear: ${act.year}\nNakshatra: ${act.nakshatra}\nYoga: ${act.yoga}\nKarana: ${act.karana}`, promptData: { type: 'panchang', panchangType: panchangView, data: act } })}>
+                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Vara (Day)</span> {String(act.vara)}</div>
+                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Tithi (Phase)</span> {String(act.tithi)}</div>
+                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Lunar Month</span> {String(act.month)}</div>
+                        <div><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Samvat Year</span> {String(act.year)}</div>
+                        <div className="col-span-2"><span className="text-amber-600 font-sans font-bold block text-[9px] uppercase">Nakshatra</span> {String(act.nakshatra)}</div>
+                        </div>
+                    );
+                    })()}
+                </div>
+                ) : null}
+
+                {/* FUNCTIONAL NATURE & SHADBALA TOGGLE */}
+                {functionalNature || shadbalaScores ? (
+                <div className="bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-sm w-full flex-1 flex flex-col min-h-0">
+                    <div className="bg-slate-100 text-slate-700 px-4 py-3 text-xs font-bold uppercase flex items-center justify-between border-b border-slate-200 shrink-0">
+                        <span className="flex items-center gap-2"><ShieldAlert size={14} className="text-slate-500"/> Dignity & Strength</span>
+                        <div className="flex bg-slate-200 rounded-full p-0.5">
+                            <button type="button" onClick={() => setFunctionalTab('roles')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${functionalTab === 'roles' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300'}`}>Roles</button>
+                            <button type="button" onClick={() => setFunctionalTab('shadbala')} className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${functionalTab === 'shadbala' ? 'bg-slate-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300'}`}>Shadbala</button>
+                        </div>
+                    </div>
+                    
+                    {functionalTab === 'roles' && functionalNature ? (
+                    <div className="p-4 bg-white grid grid-cols-1 gap-4 flex-1 content-start overflow-y-auto">
+                        <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Benefics</div>
+                            <div className="flex flex-wrap gap-2">{functionalNature.ben.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.ben.map(p => (<span key={`ben-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Benefic`, subtitle: `Functional Role`, text: `${p} acts as a positive force for this Ascendant.`, promptData: { type: 'functional', planet: p, role: 'Benefic' }})} className="text-[11px] font-bold px-2 py-1 rounded bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Malefics</div>
+                            <div className="flex flex-wrap gap-2">{functionalNature.mal.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.mal.map(p => (<span key={`mal-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Malefic`, subtitle: `Functional Role`, text: `${p} acts as a challenging force for this Ascendant.`, promptData: { type: 'functional', planet: p, role: 'Malefic' }})} className="text-[11px] font-bold px-2 py-1 rounded bg-red-50 border border-red-200 cursor-pointer hover:bg-red-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 mt-auto shrink-0">
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Maraka</div>
+                                <div className="flex flex-wrap gap-1.5">{functionalNature.mar.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.mar.map(p => (<span key={`mar-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Maraka`, subtitle: `Functional Role`, text: `${p} acts as a death-inflicting or transforming force.`, promptData: { type: 'functional', planet: p, role: 'Maraka' }})} className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 border border-purple-200 cursor-pointer hover:bg-purple-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">Badhaka</div>
+                                <div className="flex flex-wrap gap-1.5">{functionalNature.bad.length === 0 ? <span className="text-[11px] text-slate-400 italic">None</span> : functionalNature.bad.map(p => (<span key={`bad-${p}`} onClick={() => handleSymbolClick({ title: `${p} as Badhaka`, subtitle: `Functional Role`, text: `${p} acts as an obstructing or delaying force.`, promptData: { type: 'functional', planet: p, role: 'Badhaka' }})} className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 border border-orange-200 cursor-pointer hover:bg-orange-100 hover:shadow-sm transition-all">{String(p)}</span>))}</div>
+                            </div>
+                        </div>
+                        <div className="mt-2 text-[9px] text-slate-400 font-bold flex items-center gap-1 shrink-0"><Cpu size={11}/> AI analysis available on click</div>
+                    </div>
+                    ) : null}
+
+                    {functionalTab === 'shadbala' && shadbalaScores ? (
+                    <div className="p-4 bg-white flex flex-col gap-2.5 flex-1 overflow-y-auto min-h-0">
+                        {AstroEngine.GRAHAS.filter(g => g !== 'Rahu' && g !== 'Ketu').map(p => {
+                            const score = shadbalaScores?.[p];
+                            if (!score) return null;
+                            return (
+                                <div key={p} onClick={() => handleSymbolClick({ title: `${p} Shadbala`, subtitle: `Planetary Strength`, text: `${p} has a mathematical Shadbala strength of ${score.percentage}%.`, promptData: { type: 'shadbala', planet: p, score: score.percentage }})} className="cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors group">
+                                    <div className="flex justify-between items-center mb-1.5 text-[10px] font-bold">
+                                        <span className={AstroEngine.PLANET_TEXT_COLORS[p]}>{p}</span>
+                                        <span className="text-slate-500 group-hover:text-amber-600 transition-colors">{score.percentage}%</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                                        <div className="bg-slate-400 h-1.5 rounded-full" style={{ width: `${Math.min(score.percentage, 100)}%` }}></div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                        <div className="mt-auto pt-3 text-[9px] text-slate-400 font-bold flex items-center gap-1 shrink-0"><Cpu size={11}/> AI analysis available on click</div>
+                    </div>
+                    ) : null}
+
+                </div>
+                ) : null}
+            </div>
+            ) : null}
+
+            {/* 3. DASA TABLE & TIME CONTROL */}
+        {isExpert ? (
+          <div className="col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-1 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-1 flex flex-col gap-4 h-full">
+            
+            {/* DASA BOX (Flex-1 allows it to shrink and align perfectly with adjacent windows) */}
+            <div className="bg-white border-2 border-green-800 rounded-2xl overflow-hidden shadow-sm w-full flex-1 flex flex-col min-h-[200px]">
+              <div className="bg-green-800 text-white px-4 py-3 text-xs font-bold uppercase flex items-center gap-2 shrink-0"><Sparkles size={14}/> Vimshottari Dasa</div>
+              
+              <div className="bg-slate-50 flex-1 overflow-y-auto p-3 custom-scrollbar">
+                {upcomingDasas.filter(dasa => {
+                  // If no Date of Death exists, show all. Otherwise, hide dasas that start after DOD.
+                  if (!userData?.formData?.dod) return true;
+                  return new Date(dasa.dateStr) <= new Date(userData.formData.dod);
+                }).map((dasa, i) => {
+                  const md = String(AstroEngine.PLANET_SHORTS[dasa.planets[0]]);
+                  const ad = String(AstroEngine.PLANET_SHORTS[dasa.planets[1]]);
+                  const isCurrent = currentDasa && currentDasa.mahadasha === dasa.planets[0] && currentDasa.antardasha === dasa.planets[1];
+
+                  return (
+                    <details key={i} className={`mb-2 border rounded-xl shadow-sm group transition-all ${isCurrent ? 'bg-green-50 border-green-400 ring-1 ring-green-400' : 'bg-white border-slate-200'}`}>
+                      <summary className="list-none cursor-pointer p-3 text-sm font-bold flex items-center hover:bg-slate-50 transition-colors rounded-xl outline-none">
+                        <span className={`text-[10px] mr-3 transition-transform duration-200 group-open:rotate-90 ${isCurrent ? 'text-green-600' : 'text-blue-500'}`}>▶</span>
+                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[0]] || 'text-slate-700'}`}>{md}</span>
+                        <span className="text-slate-300 mx-1">▶</span>
+                        <span className={`w-7 text-center ${AstroEngine.PLANET_TEXT_COLORS[dasa.planets[1]] || 'text-slate-700'}`}>{ad}</span>
+                        <span className={`ml-auto text-xs ${isCurrent ? 'text-green-700 font-extrabold' : 'text-slate-500 font-normal'}`}>
+                          {isCurrent ? 'CURRENT' : String(dasa.dateStr)}
+                        </span>
+                      </summary>
+                      
+                      <div className="px-2 pb-2 pt-1 border-t border-slate-100 bg-slate-50/50 rounded-b-xl text-xs">
+                        {dasa.pd && dasa.pd.length > 0 ? (
+                          dasa.pd.map((pd, j) => {
+                            const pdName = String(AstroEngine.PLANET_SHORTS[pd.planet]);
+                            return (
+                              <div key={j} className="flex justify-between items-center py-1.5 px-6 text-slate-600 border-b border-slate-200/50 last:border-0 hover:bg-slate-100/50 rounded">
+                                <span className="flex gap-2">
+                                  <span className="text-slate-400">{md} - {ad} -</span> 
+                                  <span className={`font-bold ${AstroEngine.PLANET_TEXT_COLORS[pd.planet] || 'text-slate-700'}`}>{pdName}</span>
+                                </span>
+                                <span>{pd.dateStr}</span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-slate-400 italic px-4 py-2 text-center">PD calculations not available for this period.</div>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* TIME CONTROL BOX */}
+            <div className="bg-[#fdfbf6] border border-amber-200 rounded-2xl shadow-sm p-4 shrink-0 transition-all">
+              
+              {/* HEADER WITH NEW DIGITAL CLOCK DISPLAY */}
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-amber-200/50">
+                <div className="text-[11px] font-extrabold text-slate-700 uppercase flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> 
+                  TIME CONTROL
+                </div>
+                
+                {/* LIVE WATCH BADGE */}
+                <div className="bg-white border border-amber-200 px-2 py-1 rounded text-[10px] font-bold text-amber-700 shadow-inner tabular-nums tracking-wide">
+                  {time.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {/* CUSTOM RADIO */}
+                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="timeMode" 
+                    checked={!isRealtime} 
+                    onChange={() => setIsRealtime(false)}
+                    className="w-4 h-4 cursor-pointer accent-slate-800" 
+                  />
+                  <span className={!isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Custom</span>
+                </label>
+                
+                {/* REALTIME RADIO */}
+                <label className="flex items-center gap-3 text-sm font-bold text-slate-800 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="timeMode" 
+                    checked={isRealtime} 
+                    onChange={() => {
+                      setIsRealtime(true);
+                      setTime(new Date()); 
+                    }}
+                    className="w-4 h-4 cursor-pointer accent-green-600" 
+                  />
+                  <div className="flex items-center gap-2">
+                    {isRealtime && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.6)]"></span>}
+                    <span className={isRealtime ? "text-slate-900" : "text-slate-600 font-medium"}>Realtime</span>
+                  </div>
+                </label>
+
+                {/* EXPANDING TIME BUTTONS & EXACT CALENDAR PICKER */}
+                {!isRealtime && (
+                  <div className="mt-2 pt-3 border-t border-slate-200/60 animate-in slide-in-from-top-2 fade-in duration-200">
+                    
+                    {/* NEW: EXACT DATE/TIME INPUT */}
+                    <div className="mb-2">
+                      <input 
+                        type="datetime-local" 
+                        value={new Date(time.getTime() - time.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                        onChange={(e) => {
+                          if (e.target.value) setTime(new Date(e.target.value));
+                        }}
+                        className="w-full text-xs p-2 border border-amber-200 rounded-lg text-slate-700 bg-white shadow-inner focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-medium cursor-pointer"
+                      />
+                    </div>
+
+                    {/* QUICK JUMP BUTTONS */}
+                    <div className="flex justify-between gap-1">
+                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1D</button>
+                      <button onClick={() => { const d = new Date(time); d.setDate(d.getDate() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1D</button>
+                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1M</button>
+                      <button onClick={() => { const d = new Date(time); d.setMonth(d.getMonth() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1M</button>
+                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() - 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">-1Y</button>
+                      <button onClick={() => { const d = new Date(time); d.setFullYear(d.getFullYear() + 1); setTime(d); }} className="flex-1 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 text-xs font-bold rounded-lg transition-colors">+1Y</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        ) : null}
+
+
+            {/* 4. DETECTED YOGAS */}
+            {detectedYogas.length > 0 ? (
+            <div className="col-span-1 md:col-span-2 lg:col-span-2 lg:col-start-5 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-2 h-full">
+                <div className="bg-white border-2 border-indigo-200 rounded-2xl overflow-hidden shadow-sm w-full flex flex-col h-full min-h-0">
+                    <div className="bg-indigo-100 text-indigo-800 px-4 py-3 text-xs font-bold uppercase flex items-center justify-between border-b border-indigo-200 shrink-0">
+                        <span className="flex items-center gap-2"><Sparkles size={14}/> Classical Yogas</span>
+                        <span className="bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full text-[10px]">{detectedYogas.length} Found</span>
+                    </div>
+                    <div className="p-4 bg-white flex flex-col gap-3 flex-1 overflow-y-auto min-h-0">
+                        {detectedYogas.map((yoga, idx) => (
+                            <div key={idx} onClick={() => handleSymbolClick({ title: yoga.name, subtitle: `Yoga Found`, text: yoga.desc, promptData: { type: 'yoga', yogaType: yoga.type, involvedPlanets: yoga.involved } })} className={`p-3 rounded-xl border ${yoga.bg} ${yoga.border} cursor-pointer hover:shadow-lg transition-shadow`}>
+                                <div className="flex justify-between items-center mb-1">
+                                    <h4 className={`font-bold font-serif text-sm ${yoga.color}`}>{yoga.name}</h4>
+                                    <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-white border ${yoga.border} ${yoga.color}`}>{yoga.type}</span>
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">{yoga.desc}</p>
+                                <div className="mt-2.5 text-[9px] text-indigo-400 font-bold flex items-center gap-1"><Cpu size={11}/> AI analysis available on click</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            ) : null}
+
+            {/* 5. AI PANEL & EXTRA TOOLS */}
+            <div className={isExpert ? "col-span-1 md:col-span-1 lg:col-span-3 lg:col-start-4 lg:row-start-3 xl:col-span-1 xl:col-start-4 xl:row-start-2 h-full" : "col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-1 h-full"}>
+                <div className="bg-white border-2 border-amber-300 rounded-2xl shadow-sm p-5 w-full flex flex-col h-full min-h-0">
+                    <div className="text-sm font-bold mb-4 text-amber-800 font-serif uppercase flex items-center gap-2 shrink-0"><MessageCircle size={16} /> Ask Parashari AI</div>
+                    <div className="flex gap-2 mb-4 shrink-0">
+                        <input type="text" placeholder="Ask a question about your chart..." className="flex-1 p-3 border border-slate-300 rounded-xl text-sm outline-none shadow-inner" value={qaInput} onChange={e => setQaInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAskAI()} />
+                        <button onClick={() => handleAskAI()} disabled={qaLoading} className="bg-amber-600 text-white p-3 rounded-xl shadow-sm hover:bg-amber-700 transition-colors shrink-0"><Search size={18}/></button>
+                    </div>
+                    {qaLoading ? <div className="p-4 text-center text-amber-600 text-xs font-bold uppercase flex flex-col items-center gap-2 shrink-0"><Loader2 size={24} className="animate-spin"/> Consulting stars...</div> : null}
+                    {qaResult?.type === 'success' ? <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded shadow-inner overflow-y-auto"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(qaResult.text)}</p></div> : null}
+                    
+                    {/* The mt-auto dynamically pushes these tools to the absolute bottom if stretched */}
+                    <div className="mt-auto border-t border-slate-200 pt-5 space-y-3 shrink-0">
+                        <button onClick={handleGenerateMantra} disabled={mantraLoading} className="w-full bg-purple-50 text-purple-800 border border-purple-200 py-3 rounded-xl hover:bg-purple-100 font-bold shadow-sm flex items-center justify-center gap-2 text-xs transition-colors">
+                        {mantraLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} Daily Prediction & Upaya
+                        </button>
+                        {mantraResult?.type === 'success' && <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(mantraResult.text)}</p></div>}
+                        
+                        <div className="flex gap-2">
+                        <input type="text" placeholder="Describe a dream to decode..." className="flex-1 p-3 border border-slate-300 rounded-xl text-xs outline-none shadow-inner" value={dreamInput} onChange={e => setDreamInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleDreamDecode()} />
+                        <button onClick={handleDreamDecode} disabled={dreamLoading} className="bg-purple-600 text-white p-3 rounded-xl shadow-sm hover:bg-purple-700 transition-colors shrink-0">{dreamLoading ? <Loader2 size={16} className="animate-spin"/> : <Moon size={16}/>}</button>
+                        </div>
+                        {dreamResult?.type === 'success' && <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(dreamResult.text)}</p></div>}
+
+                        <button onClick={handleLuckyElements} disabled={luckyLoading} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-xl shadow-sm text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+                        {luckyLoading ? <Loader2 size={16} className="animate-spin"/> : <Star size={16} className="text-amber-500"/>} Find Lucky Elements
+                        </button>
+                        {luckyResult?.type === 'success' && <div className="bg-emerald-50 border-l-4 border-emerald-500 p-4 mt-3 rounded shadow-inner"><p className="text-sm text-slate-800 font-serif italic whitespace-pre-wrap">{String(luckyResult.text)}</p></div>}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+      </div>
     </div>
   );
-} 
+}
